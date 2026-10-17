@@ -3,7 +3,7 @@
 #   npm run chave                       (ANTHROPIC_API_KEY, com teste real)
 #   npm run chave -- FIRECRAWL_API_KEY  (qualquer outra variável)
 # Versão PHP, no servidor (como root, por ssh -t), grava no segredos.ini fora da pasta pública:
-#   bash definir-chave.sh ANTHROPIC_API_KEY --ini /etc/form-dinamico/segredos.ini
+#   bash definir-chave.sh ANTHROPIC_API_KEY --ini /etc/formulario-super-power/segredos.ini
 # Rode num terminal a sério (não com o "!" do Claude Code: lá não há teclado para a leitura escondida).
 # 1. Lê a chave escondida e limpa o que a colagem acrescenta.  2. Se for a da Anthropic, testa com uma mensagem mínima.
 # 3. Grava no .env.local (só o seu utilizador lê).  4. Se o projeto estiver ligado à Vercel (.vercel/), grava também lá.

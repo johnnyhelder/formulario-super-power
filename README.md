@@ -1,4 +1,4 @@
-# Form Dinâmico
+# Formulário Super Power
 
 **O formulário que conversa.** Uma pergunta de cada vez, como num chat. Enquanto a pessoa responde, a IA pesquisa a empresa dela na internet, anota o problema enquanto ela escreve, cria uma pergunta sob medida e desenha o mapa do caso. No fim, você recebe um lead qualificado por e-mail, com tudo o que precisa para a primeira conversa.
 
@@ -45,7 +45,7 @@ Formulário comprido cansa e filtra mal. A pessoa desiste no meio, ou responde q
 Você precisa de [Node.js 20.9 ou mais novo](https://nodejs.org), [git](https://git-scm.com) e [Claude Code](https://claude.com/claude-code).
 
 ```bash
-git clone https://github.com/johnnyhelder/form-dinamico.git meu-form
+git clone https://github.com/johnnyhelder/formulario-super-power.git meu-form
 cd meu-form
 npm install
 claude
@@ -62,7 +62,7 @@ Usa outra LLM (Codex, Cursor, Gemini CLI, Copilot)? As instruções moram no `AG
 ## Começo manual
 
 ```bash
-git clone https://github.com/johnnyhelder/form-dinamico.git meu-form
+git clone https://github.com/johnnyhelder/formulario-super-power.git meu-form
 cd meu-form
 npm install
 npm run dev

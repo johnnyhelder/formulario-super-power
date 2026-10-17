@@ -1,5 +1,5 @@
 <?php
-// Form Dinâmico, versão PHP: as peças comuns aos endereços da API.
+// Formulário Super Power, versão PHP: as peças comuns aos endereços da API.
 // Não guarda nada na pasta pública: as chaves vivem num segredos.ini fora dela
 // e as conversas numa pasta "dados" ao lado desse ficheiro.
 // Só precisa das extensões curl e json (vêm em quase todos os alojamentos).
@@ -17,12 +17,12 @@ function fd_config(): array
     return $c ??= json_decode((string) file_get_contents(__DIR__ . '/config.json'), true) ?: [];
 }
 
-// Onde está o segredos.ini. Por ordem: a variável FD_SEGREDOS, /etc/form-dinamico/,
-// ou a pasta form-dinamico ao lado da pasta pública do site (ex. /home/conta/form-dinamico/).
+// Onde está o segredos.ini. Por ordem: a variável FD_SEGREDOS, /etc/formulario-super-power/,
+// ou a pasta formulario-super-power ao lado da pasta pública do site (ex. /home/conta/formulario-super-power/).
 function fd_segredos_caminho(): string
 {
     $raiz = dirname((string) ($_SERVER['DOCUMENT_ROOT'] ?? '') ?: __DIR__);
-    foreach ([(string) getenv('FD_SEGREDOS'), '/etc/form-dinamico/segredos.ini', $raiz . '/form-dinamico/segredos.ini'] as $c) {
+    foreach ([(string) getenv('FD_SEGREDOS'), '/etc/formulario-super-power/segredos.ini', $raiz . '/formulario-super-power/segredos.ini'] as $c) {
         if ($c !== '' && is_readable($c)) {
             return $c;
         }
@@ -43,7 +43,7 @@ function fd_segredo(string $nome): string
 // A pasta das conversas e dos contadores: "dados", ao lado do segredos.ini.
 function fd_dados(string $sub = ''): string
 {
-    $base = fd_segredos_caminho() ? dirname(fd_segredos_caminho()) . '/dados' : sys_get_temp_dir() . '/form-dinamico';
+    $base = fd_segredos_caminho() ? dirname(fd_segredos_caminho()) . '/dados' : sys_get_temp_dir() . '/formulario-super-power';
     $dir = $base . ($sub !== '' ? '/' . $sub : '');
     if (!is_dir($dir)) {
         @mkdir($dir, 0700, true);

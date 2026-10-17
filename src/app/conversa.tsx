@@ -52,7 +52,7 @@ const ETAPAS = etapas(C)
 const EMPRESA = passoEmpresa(C)
 const SUGESTAO = passoSugestao(C)
 const ULTIMA = ETAPAS[ETAPAS.length - 1]
-const CHAVE_SESSAO = 'form-dinamico-sessao'
+const CHAVE_SESSAO = 'formulario-super-power-sessao'
 // Etapa virtual de uma regra de coerência: 'coerencia:<id da regra>'.
 const COERENCIA = 'coerencia:'
 // Com a chave do Turnstile, a IA só responde depois de a Cloudflare confirmar que é uma pessoa.

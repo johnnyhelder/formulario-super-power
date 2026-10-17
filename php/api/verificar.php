@@ -22,7 +22,7 @@ fd_config() ? $ok('config.json lido (' . count(fd_config()['passos']) . ' passos
 echo "\n2. Segredos\n";
 $caminho = fd_segredos_caminho();
 if ($caminho === '') {
-    $erro('não encontrei o segredos.ini (FD_SEGREDOS, /etc/form-dinamico/segredos.ini ou form-dinamico/segredos.ini ao lado da pasta pública)');
+    $erro('não encontrei o segredos.ini (FD_SEGREDOS, /etc/formulario-super-power/segredos.ini ou formulario-super-power/segredos.ini ao lado da pasta pública)');
 } else {
     $ok("segredos.ini em {$caminho}");
     if ((fileperms($caminho) & 0004) !== 0) {

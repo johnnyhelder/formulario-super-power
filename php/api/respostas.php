@@ -61,7 +61,7 @@ $linha = [
     'atualizadoEm' => $agora,
 ];
 if (file_put_contents($ficheiro, json_encode($linha, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), LOCK_EX) === false) {
-    error_log('[form-dinamico] não consegui gravar em ' . $ficheiro);
+    error_log('[formulario-super-power] não consegui gravar em ' . $ficheiro);
     fd_responder(['ok' => false], 500);
 }
 // Dados pessoais: só o utilizador do PHP lê.
@@ -115,7 +115,7 @@ function avisar(mixed $aviso, array $contato, bool $teste, array $linha): void
             'html' => $html,
         ], JSON_UNESCAPED_UNICODE), 8);
         if ($estado !== 200) {
-            error_log('[form-dinamico] e-mail falhou: HTTP ' . $estado);
+            error_log('[formulario-super-power] e-mail falhou: HTTP ' . $estado);
         }
     }
     // Pedidos de teste não vão para o Telegram nem para o CRM.

@@ -19,7 +19,7 @@ O formulário vive num endereço só dele, por exemplo `diagnostico.seudominio.c
 
 Copie `formulario.ts`, `src/lib/*`, `src/app/conversa.tsx`, `src/app/pecas.tsx` e as rotas `src/app/api/ia` e `src/app/api/respostas`. Crie a página (ex. `src/app/diagnostico/page.tsx`) que mostra `<Conversa />`.
 
-O `globals.css` deste projeto mexe em `body` e define as cores em `:root`. Num site que já tem visual próprio, ponha as regras dentro de uma classe (ex. `.fd-raiz`) e embrulhe a página nela. Peça à sua LLM: "copia o form-dinamico para este site, na rota /diagnostico, sem mexer no visual do resto".
+O `globals.css` deste projeto mexe em `body` e define as cores em `:root`. Num site que já tem visual próprio, ponha as regras dentro de uma classe (ex. `.fd-raiz`) e embrulhe a página nela. Peça à sua LLM: "copia o formulario-super-power para este site, na rota /diagnostico, sem mexer no visual do resto".
 
 ## C. Alojamento PHP (cPanel, WordPress, servidor próprio sem Node)
 

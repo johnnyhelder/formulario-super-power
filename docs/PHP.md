@@ -30,8 +30,8 @@ rsync -av --delete publicar/ utilizador@servidor:/var/www/seusite/pedido/
 As chaves vivem num `segredos.ini`, num destes sítios (o PHP procura por esta ordem):
 
 1. o caminho na variável de ambiente `FD_SEGREDOS`;
-2. `/etc/form-dinamico/segredos.ini` (servidor próprio);
-3. `form-dinamico/segredos.ini` **ao lado** da pasta pública. No cPanel, se o site está em `/home/conta/public_html`, fica em `/home/conta/form-dinamico/segredos.ini`.
+2. `/etc/formulario-super-power/segredos.ini` (servidor próprio);
+3. `formulario-super-power/segredos.ini` **ao lado** da pasta pública. No cPanel, se o site está em `/home/conta/public_html`, fica em `/home/conta/formulario-super-power/segredos.ini`.
 
 Ao lado do `segredos.ini` nasce a pasta `dados/`, com as conversas e os contadores. O PHP tem de conseguir escrever lá.
 
@@ -39,13 +39,13 @@ Ao lado do `segredos.ini` nasce a pasta `dados/`, com as conversas e os contador
 
 ```bash
 scp scripts/definir-chave.sh root@servidor:/tmp/
-ssh -t root@servidor bash /tmp/definir-chave.sh ANTHROPIC_API_KEY --ini /etc/form-dinamico/segredos.ini
-ssh -t root@servidor bash /tmp/definir-chave.sh FIRECRAWL_API_KEY --ini /etc/form-dinamico/segredos.ini
+ssh -t root@servidor bash /tmp/definir-chave.sh ANTHROPIC_API_KEY --ini /etc/formulario-super-power/segredos.ini
+ssh -t root@servidor bash /tmp/definir-chave.sh FIRECRAWL_API_KEY --ini /etc/formulario-super-power/segredos.ini
 ```
 
 O script testa a chave da Anthropic, grava com dono `root:www-data` e permissão 640 (o PHP lê, mais ninguém) e cria `dados/` só para o PHP. Se o PHP corre com outro utilizador, use `WEB_USER=nginx bash /tmp/definir-chave.sh ...`.
 
-**cPanel (sem root):** crie a pasta `form-dinamico` ao lado de `public_html` e, dentro, o ficheiro `segredos.ini` pelo gestor de ficheiros, com permissão 640. Uma variável por linha:
+**cPanel (sem root):** crie a pasta `formulario-super-power` ao lado de `public_html` e, dentro, o ficheiro `segredos.ini` pelo gestor de ficheiros, com permissão 640. Uma variável por linha:
 
 ```ini
 ANTHROPIC_API_KEY=cole-aqui
@@ -85,7 +85,7 @@ php /var/www/seusite/pedido/api/leads.php                 # últimos leads e ond
 php /var/www/seusite/pedido/api/leads.php apagar-testes   # apaga as conversas de teste
 ```
 
-(No cPanel sem terminal, os leads chegam por e-mail e ficam em `form-dinamico/dados/respostas/`, um ficheiro por conversa.)
+(No cPanel sem terminal, os leads chegam por e-mail e ficam em `formulario-super-power/dados/respostas/`, um ficheiro por conversa.)
 
 ## Diferenças em relação à versão Next
 
@@ -100,4 +100,4 @@ php /var/www/seusite/pedido/api/leads.php apagar-testes   # apaga as conversas d
   mkdir -p ~/.ssh && cp /mnt/c/Users/SEU_UTILIZADOR/.ssh/id_ed25519 ~/.ssh/ && chmod 600 ~/.ssh/id_ed25519
   ```
 - **O script da chave fecha sem gravar nada**: faltou o `-t` no `ssh` (ou correu sem terminal). O script avisa.
-- **A IA não responde e o `verificar.php` diz que está tudo bem**: confira se o `config.json` foi enviado (está em `api/`) e veja o registo de erros do PHP, com as linhas `[form-dinamico]`.
+- **A IA não responde e o `verificar.php` diz que está tudo bem**: confira se o `config.json` foi enviado (está em `api/`) e veja o registo de erros do PHP, com as linhas `[formulario-super-power]`.

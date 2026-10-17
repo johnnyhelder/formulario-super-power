@@ -38,7 +38,7 @@ if (existsSync(join(raiz, '.env.local'))) {
 }
 
 // O Next não exporta rotas de API: compila-se uma cópia do projeto sem elas.
-const copia = join(tmpdir(), `form-dinamico-exportar-${process.pid}`)
+const copia = join(tmpdir(), `formulario-super-power-exportar-${process.pid}`)
 rmSync(copia, { recursive: true, force: true })
 cpSync(raiz, copia, {
   recursive: true,

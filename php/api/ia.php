@@ -26,7 +26,7 @@ if ($chave === '') {
 // Teto diário para o site inteiro: é o que segura o pior caso da fatura.
 $teto = (int) (fd_segredo('IA_TETO_DIARIO') ?: 1500);
 if (fd_contar(fd_dados('uso') . '/' . date('Y-m-d') . '.json', 86400) > $teto) {
-    error_log('[form-dinamico] teto diário de chamadas à IA atingido');
+    error_log('[formulario-super-power] teto diário de chamadas à IA atingido');
     fd_responder(['ok' => false], 429);
 }
 
@@ -71,7 +71,7 @@ $base = fd_segredo('ANTHROPIC_BASE_URL') ?: 'https://api.anthropic.com';
     'messages' => [['role' => 'user', 'content' => $texto]],
 ], JSON_UNESCAPED_UNICODE), 12);
 if ($estado !== 200) {
-    error_log('[form-dinamico] IA ' . $tipo . ' HTTP ' . $estado . ': ' . substr($bruto, 0, 300));
+    error_log('[formulario-super-power] IA ' . $tipo . ' HTTP ' . $estado . ': ' . substr($bruto, 0, 300));
     fd_responder(['ok' => false], 502);
 }
 
@@ -85,7 +85,7 @@ foreach ((json_decode($bruto, true)['content'] ?? []) as $bloco) {
 // A saída estruturada garante o formato; confere-se na mesma que os campos pedidos vieram.
 foreach ($C['esquemas'][$tipo]['required'] ?? [] as $campo) {
     if (!is_array($saida) || !array_key_exists($campo, $saida)) {
-        error_log('[form-dinamico] IA ' . $tipo . ': saída fora do esquema');
+        error_log('[formulario-super-power] IA ' . $tipo . ': saída fora do esquema');
         fd_responder(['ok' => false], 502);
     }
 }
