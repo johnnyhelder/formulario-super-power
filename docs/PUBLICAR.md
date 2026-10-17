@@ -21,9 +21,13 @@ Copie `formulario.ts`, `src/lib/*`, `src/app/conversa.tsx`, `src/app/pecas.tsx` 
 
 O `globals.css` deste projeto mexe em `body` e define as cores em `:root`. Num site que já tem visual próprio, ponha as regras dentro de uma classe (ex. `.fd-raiz`) e embrulhe a página nela. Peça à sua LLM: "copia o form-dinamico para este site, na rota /diagnostico, sem mexer no visual do resto".
 
-## C. Dentro de WordPress, Wix ou outro construtor
+## C. Alojamento PHP (cPanel, WordPress, servidor próprio sem Node)
 
-Publique como em **A** e coloque o formulário numa página do site com um bloco de HTML:
+`npm run exportar` gera a pasta `publicar/` com a mesma página e uma API em PHP. Guia completo em [PHP.md](PHP.md). Com WordPress no mesmo domínio, use `--caminho /pedido` e envie para essa subpasta.
+
+## D. Dentro de Wix ou outro construtor sem PHP
+
+Publique como em **A** (ou **C**) e coloque o formulário numa página do site com um bloco de HTML:
 
 ```html
 <iframe src="https://diagnostico.seudominio.com" title="Diagnóstico"

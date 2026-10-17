@@ -1,0 +1,5 @@
+# Só os três endereços da API respondem pela web.
+Options -Indexes
+<FilesMatch "^(_base\.php|leads\.php|verificar\.php|config\.json)$">
+  Require all denied
+</FilesMatch>

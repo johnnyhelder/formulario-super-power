@@ -16,7 +16,8 @@
     "test": "tsx --test tests/*.test.ts",
     "verificar": "tsx scripts/verificar.ts",
     "chave": "bash scripts/definir-chave.sh",
-    "leads": "tsx scripts/leads.ts"
+    "leads": "tsx scripts/leads.ts",
+    "exportar": "tsx scripts/exportar.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.1",

@@ -2,18 +2,31 @@
 # Grava uma chave secreta sem ela aparecer na tela nem passar pelo chat.
 #   npm run chave                       (ANTHROPIC_API_KEY, com teste real)
 #   npm run chave -- FIRECRAWL_API_KEY  (qualquer outra variável)
+# Versão PHP, no servidor (como root, por ssh -t), grava no segredos.ini fora da pasta pública:
+#   bash definir-chave.sh ANTHROPIC_API_KEY --ini /etc/form-dinamico/segredos.ini
 # Rode num terminal a sério (não com o "!" do Claude Code: lá não há teclado para a leitura escondida).
 # 1. Lê a chave escondida e limpa o que a colagem acrescenta.  2. Se for a da Anthropic, testa com uma mensagem mínima.
 # 3. Grava no .env.local (só o seu utilizador lê).  4. Se o projeto estiver ligado à Vercel (.vercel/), grava também lá.
 set -euo pipefail
 umask 077
-NOME="${1:-ANTHROPIC_API_KEY}"
-ENV=.env.local
+NOME=ANTHROPIC_API_KEY
+INI=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --ini) INI="${2:-}"; shift 2 ;;
+    *) NOME="$1"; shift ;;
+  esac
+done
+ENV="${INI:-.env.local}"
+# Quem corre o PHP no servidor (para poder ler o segredos.ini e escrever na pasta dados).
+WEB="${WEB_USER:-www-data}"
 [[ "$NOME" =~ ^[A-Z][A-Z0-9_]*$ ]] || { echo "Nome de variável inválido: $NOME"; exit 1; }
 
 if [[ ! -t 0 ]]; then
   echo "Este comando precisa de um terminal a sério, onde possa colar a chave."
-  echo "Abra um terminal (fora do Claude Code), entre na pasta do projeto e rode: npm run chave${1:+ -- $1}"
+  echo "Abra um terminal (fora do Claude Code), entre na pasta do projeto e rode: npm run chave -- $NOME"
+  echo "Num servidor, entre com ssh -t (o -t dá o terminal)."
+
   exit 1
 fi
 
@@ -40,7 +53,8 @@ if [[ "$NOME" == "ANTHROPIC_API_KEY" ]]; then
     exit 1
   fi
   # O mesmo modelo da rota da IA, lido de um sítio só.
-  MODELO="$(sed -n "s/^export const MODELO = '\([^']*\)'.*/\1/p" src/lib/ia.ts)"
+  MODELO="$(sed -n "s/^export const MODELO = '\([^']*\)'.*/\1/p" src/lib/ia.ts 2>/dev/null || true)"
+  MODELO="${MODELO:-claude-haiku-5-5}"
   # O cabeçalho com a chave vai por stdin, para não aparecer na lista de processos.
   # Há vários formatos de chave (sk-ant-api..., sk-ant-usr...): quem decide é este teste, nunca o prefixo.
   testar() {
@@ -75,7 +89,8 @@ if [[ "$NOME" == "ANTHROPIC_API_KEY" ]]; then
   echo "Chave válida e com créditos."
 fi
 
-# .env.local: escreve ao lado e troca de uma vez, com permissão só para o seu utilizador.
+# .env.local (ou segredos.ini): escreve ao lado e troca de uma vez, com permissão só para o seu utilizador.
+[[ -n "$INI" ]] && mkdir -p "$(dirname "$INI")"
 touch "$ENV"
 TMP="$(mktemp "$ENV.XXXXXX")"
 if [[ -n "$WORKSPACE" ]]; then
@@ -87,6 +102,20 @@ printf '%s=%s\n' "$NOME" "$VALOR" >> "$TMP"
 if [[ -n "$WORKSPACE" ]]; then printf 'ANTHROPIC_WORKSPACE_ID=%s\n' "$WORKSPACE" >> "$TMP"; fi
 chmod 600 "$TMP"
 mv "$TMP" "$ENV"
+if [[ -n "$INI" ]]; then
+  # No servidor: o PHP lê (grupo), ninguém mais. A pasta dados é só do PHP.
+  mkdir -p "$(dirname "$INI")/dados"
+  if [[ $EUID -eq 0 ]] && id "$WEB" >/dev/null 2>&1; then
+    chown "root:$WEB" "$INI" "$(dirname "$INI")"
+    chown "$WEB:$WEB" "$(dirname "$INI")/dados"
+  fi
+  chmod 640 "$INI"
+  chmod 750 "$(dirname "$INI")"
+  chmod 700 "$(dirname "$INI")/dados"
+  echo "Gravada em $INI."
+  unset VALOR
+  exit 0
+fi
 echo "Gravada no .env.local."
 
 # Vercel, se o projeto estiver ligado (vercel link). O valor entra por stdin.

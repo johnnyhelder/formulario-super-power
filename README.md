@@ -16,7 +16,8 @@
 <p align="center">
   <a href="#começo-rápido-com-o-claude-code"><b>Montar com o Claude Code</b></a> &nbsp;·&nbsp;
   <a href="#começo-manual"><b>Montar sem LLM</b></a> &nbsp;·&nbsp;
-  <a href="docs/PUBLICAR.md"><b>Publicar</b></a>
+  <a href="docs/PUBLICAR.md"><b>Publicar</b></a> &nbsp;·&nbsp;
+  <a href="docs/PHP.md"><b>Alojamento PHP</b></a>
 </p>
 
 Formulário comprido cansa e filtra mal. A pessoa desiste no meio, ou responde qualquer coisa para acabar logo. Este aqui é a versão aberta do diagnóstico que roda no site do [@johnnyhelder.ia](https://www.instagram.com/johnnyhelder.ia/), pensada para tráfego pago. A pessoa sente que está avançando e que foi ouvida, e você recebe menos contatos frios.
@@ -104,6 +105,10 @@ Cêntimos por lead. A IA (Claude Haiku) custa menos de 1 cêntimo por conversa c
 - **Respostas da IA em formato fechado.** Saída estruturada com JSON Schema, conferida de novo antes de usar. A página nunca interpreta texto livre da IA.
 - **O link da empresa só aparece se veio mesmo da pesquisa.** A IA não inventa sites.
 - **A IA não recebe nome, e-mail nem telefone.**
+
+## Site em PHP, WordPress ou cPanel?
+
+Também dá. `npm run exportar` gera uma pasta com a mesma página e três ficheiros PHP pequenos (só precisam de `curl` e `json`). Envia por FTP e as chaves ficam num ficheiro fora da parte pública. Passo a passo em [docs/PHP.md](docs/PHP.md).
 
 ## Stack
 

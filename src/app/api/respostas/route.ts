@@ -4,10 +4,8 @@ import { FORMULARIO } from '../../../../formulario'
 import { rateLimitOrReject } from '@/lib/rate-limit'
 import { gravar } from '@/lib/banco'
 import { iaSchema, respostasSchema, type IA } from '@/lib/ia'
-import { linhasResumo, motivosParaRever } from '@/lib/fluxo'
+import { montarAviso } from '@/lib/aviso'
 import { sessaoValida, turnstileLigado } from '@/lib/sessao'
-import { TEXTOS } from '@/lib/textos'
-import type { Respostas } from '@/lib/tipos'
 
 // Cada resposta grava a conversa (para medir onde as pessoas desistem).
 // O último passo traz o contato, marca como concluída e avisa: e-mail,
@@ -78,39 +76,10 @@ const escapar = (s: unknown) =>
 
 // Cada canal falha sozinho: um Telegram em baixo não impede o e-mail.
 async function avisar(envio: Envio, teste: boolean) {
-  const C = FORMULARIO
-  const T = TEXTOS[C.idioma]
-  const r: Respostas = envio.respostas
-  const ia = envio.ia as IA
-  const contato = envio.contato!
-  const problema = C.passos.find((p) => p.tipo === 'problema')
-  const extra = C.passos.find((p) => p.tipo === 'extra')
-  // Pedido incoerente ou sem relação com o negócio: chega marcado, para ninguém responder no automático.
-  const motivos = motivosParaRever(C, r, ia)
-  const assunto = `${teste ? '[TESTE] ' : ''}${motivos.length ? `[${T.rever.toUpperCase()}] ` : ''}${C.aviso.assunto(r)}`
-  const resumo = C.passos.find((p) => p.tipo === 'resumo')
-  const correcao = resumo && r[resumo.id] !== T.estaCerto ? String(r[resumo.id] ?? '') : undefined
-  const linhas = ([
-    ...motivos.map((m) => [T.rever, m]),
-    [T.nome, contato.nome],
-    [T.email, contato.email],
-    [T.telefone, contato.telefone],
-    ...linhasResumo(C, r, ia).filter(([k]) => k !== (problema?.resumo ?? T.oQueQuer)),
-    ...(extra && ia.pergunta ? [[ia.pergunta.pergunta, String(r[extra.id] ?? '')]] : []),
-    [T.resumoIA, ia.resumo],
-    [T.correcao, correcao],
-    [T.mapaProblema, ia.mapa?.problema],
-    [T.mapaObjetivo, ia.mapa?.objetivo],
-    [T.mapaPasso, ia.mapa?.primeiroPasso],
-    [T.mapaAjuste, ia.ajusteMapa],
-    [T.origem, envio.origem],
-    [T.tempo, envio.duracaoSeg ? `${Math.max(1, Math.round(envio.duracaoSeg / 60))} min` : undefined],
-  ] as [string, string | undefined][]).filter((l): l is [string, string] => Boolean(l[1]))
-  const textoProblema = problema ? String(r[problema.id] ?? '') : ''
-
-  const canais: Promise<void>[] = [email(assunto, linhas, problema?.resumo ?? T.oQueQuer, textoProblema, contato.email, teste)]
+  const a = montarAviso(FORMULARIO, { ...envio, ia: envio.ia as IA, contato: envio.contato! }, teste)
+  const canais: Promise<void>[] = [email(a.assunto, a.linhas, a.tituloProblema, a.problema, envio.contato!.email, teste)]
   // Pedidos de teste não vão para o Telegram nem para o CRM.
-  if (!teste) canais.push(telegram(assunto, linhas, textoProblema), webhook(envio))
+  if (!teste) canais.push(telegram(a.assunto, a.linhas, a.problema), webhook(envio))
   await Promise.allSettled(canais)
 }
 

@@ -10,6 +10,7 @@ import {
   regraPendente, texto as textoDe,
 } from '@/lib/fluxo'
 import { TEXTOS } from '@/lib/textos'
+import { montarAviso } from '@/lib/aviso'
 import { Bolha, CartaoCenario, CartaoEmpresa, CartaoEscala, CartaoMapa, Digitando, Radar, Resumo } from './pecas'
 
 // A conversa. Uma pergunta de cada vez, como num chat: a resposta vira
@@ -56,6 +57,10 @@ const CHAVE_SESSAO = 'form-dinamico-sessao'
 const COERENCIA = 'coerencia:'
 // Com a chave do Turnstile, a IA só responde depois de a Cloudflare confirmar que é uma pessoa.
 const TURNSTILE = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY
+// Versão PHP (npm run exportar): a página é estática e fala com api/*.php na mesma pasta.
+const PHP = process.env.NEXT_PUBLIC_FD_PHP === '1'
+const rota = (nome: 'ia' | 'respostas' | 'sessao') =>
+  PHP ? `${process.env.NEXT_PUBLIC_FD_CAMINHO ?? ''}/api/${nome}.php` : `/api/${nome}`
 
 const espera = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
@@ -146,7 +151,7 @@ export function Conversa() {
     try {
       const assinada = await Promise.race([sessaoIA.current, espera(limiteMs).then(() => '')])
       if (TURNSTILE && !assinada) return undefined
-      const res = await fetch('/api/ia', {
+      const res = await fetch(rota('ia'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(assinada ? { 'x-sessao-ia': assinada } : {}) },
         body: JSON.stringify(corpo),
@@ -174,7 +179,7 @@ export function Conversa() {
   const gravar = useCallback(
     async (passo: number) => {
       const assinada = await Promise.race([sessaoIA.current, espera(3000).then(() => '')])
-      fetch('/api/respostas', {
+      fetch(rota('respostas'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(assinada ? { 'x-sessao-ia': assinada } : {}) },
         body: JSON.stringify(corpoEnvio(passo)),
@@ -242,7 +247,7 @@ export function Conversa() {
           appearance: 'interaction-only',
           callback: async (token: string) => {
             try {
-              const res = await fetch('/api/sessao', {
+              const res = await fetch(rota('sessao'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ token }),
@@ -542,16 +547,20 @@ export function Conversa() {
     setDigitando(true)
     try {
       const assinada = await Promise.race([sessaoIA.current, espera(3000).then(() => '')])
-      const res = await fetch('/api/respostas', {
+      const contato = {
+        nome: String(rr[C.contato.nome] ?? ''),
+        email: String(rr[C.contato.email] ?? ''),
+        telefone: C.contato.telefone ? String(rr[C.contato.telefone] ?? '') : undefined,
+      }
+      const corpo = corpoEnvio(ETAPAS.length)
+      const res = await fetch(rota('respostas'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(assinada ? { 'x-sessao-ia': assinada } : {}) },
         body: JSON.stringify({
-          ...corpoEnvio(ETAPAS.length),
-          contato: {
-            nome: String(rr[C.contato.nome] ?? ''),
-            email: String(rr[C.contato.email] ?? ''),
-            telefone: C.contato.telefone ? String(rr[C.contato.telefone] ?? '') : undefined,
-          },
+          ...corpo,
+          contato,
+          // O PHP não corre o formulario.ts: recebe o aviso já montado.
+          ...(PHP ? { aviso: montarAviso(C, { ...corpo, ia: iaRef.current, contato }, teste.current) } : {}),
         }),
       })
       if (!res.ok) throw new Error()

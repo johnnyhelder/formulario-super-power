@@ -14,3 +14,6 @@ next-env.d.ts
 # sistema
 .DS_Store
 npm-debug.log*
+
+# versão PHP gerada por npm run exportar
+publicar/
