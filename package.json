@@ -1,0 +1,36 @@
+{
+  "name": "form-dinamico",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Formulário que conversa: uma pergunta de cada vez, com IA que pesquisa a empresa, anota o problema e desenha o mapa do caso. Next.js + Vercel + Neon.",
+  "license": "MIT",
+  "author": "Johnny Helder (https://www.instagram.com/johnnyhelder.ia/)",
+  "engines": {
+    "node": ">=20.9"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test tests/*.test.ts",
+    "verificar": "tsx scripts/verificar.ts",
+    "chave": "bash scripts/definir-chave.sh",
+    "leads": "tsx scripts/leads.ts"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^1.0.1",
+    "lucide-react": "^0.577.0",
+    "next": "^16.2.9",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^25.8.0",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "tsx": "^4.22.4",
+    "typescript": "^6.0.3"
+  }
+}

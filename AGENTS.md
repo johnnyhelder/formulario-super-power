@@ -1,0 +1,100 @@
+# AGENTS.md
+
+Instruções para qualquer agente de código (Claude Code, Codex, Cursor, Gemini CLI, Copilot e outros) que abrir este repositório. **Este arquivo é a fonte única.** O `CLAUDE.md` só importa este arquivo; um teste (`tests/agentes.test.ts`) garante que continue assim. Mude as regras aqui.
+
+Quando a pessoa disser "me ajuda a configurar" (ou algo parecido), comece pelo **Roteiro** abaixo. Não explique o projeto inteiro antes; faça as perguntas do diagnóstico.
+
+## Quem você está ajudando
+
+Quase sempre alguém **que não é programador**: dono de negócio, gestor de tráfego, agência montando para um cliente. Fale em português do Brasil, trate por "você", frases curtas, sem jargão. Quando um termo técnico for inevitável (deploy, variável de ambiente), explique em uma frase na primeira vez.
+
+## O que é este projeto
+
+Um formulário que conversa. Uma pergunta de cada vez, como num chat, com IA em segundo plano que:
+
+- pesquisa a empresa na internet assim que a pessoa escreve o nome e pergunta "É esta a sua empresa?";
+- anota o problema enquanto a pessoa escreve e desenha o cartão do cenário;
+- cria uma pergunta extra a partir do que ela contou;
+- desenha o mapa do caso no fim, que a pessoa confirma ou ajusta.
+
+Next.js (App Router, TypeScript) na Vercel, Postgres no Neon, e-mail pelo Resend, IA pelo Claude Haiku, pesquisa pelo Firecrawl. **Tudo o que muda de um negócio para outro está no `formulario.ts`.** O resto do código não precisa de ser tocado para adaptar o formulário.
+
+Mapa do código:
+
+| Arquivo | O que faz |
+|---|---|
+| `formulario.ts` | Perguntas, opções, textos, cores, o que a IA sabe do negócio, radar, assunto do e-mail. |
+| `src/lib/tipos.ts` | O que cada tipo de passo aceita (leia antes de editar o `formulario.ts`). |
+| `src/lib/fluxo.ts` | Que pergunta vem a seguir, painel, radar, o que a IA lê. Funções puras, testadas. |
+| `src/lib/validar.ts` | Confere se o `formulario.ts` está coerente. |
+| `src/lib/ia.ts` | Formatos das respostas da IA (JSON Schema + zod). |
+| `src/app/conversa.tsx` | O chat. `src/app/pecas.tsx`: os cartões. `src/app/globals.css`: o visual. |
+| `src/app/api/ia/route.ts` | Chamadas à IA e à pesquisa. `src/app/api/respostas/route.ts`: grava e avisa por e-mail. |
+| `src/lib/banco.ts` | A tabela `form_respostas` (cria-se sozinha). |
+
+## Regras de segurança (inegociáveis)
+
+1. **Segredos só no `.env.local` e nas variáveis da Vercel.** `ANTHROPIC_API_KEY`, `FIRECRAWL_API_KEY`, `DATABASE_URL` e `RESEND_API_KEY` nunca vão para código, commit, README, issue ou log.
+2. **Peça para a pessoa gravar cada chave com `npm run chave -- NOME`**, que lê o valor escondido, testa a da Anthropic e grava no `.env.local` (e na Vercel, se o projeto estiver ligado). No Claude Code, peça para ela rodar com `!` na frente (`! npm run chave`), para o valor não passar pela conversa. Nunca peça que cole uma chave no chat. Se ela colar mesmo assim, não repita o valor, grave no `.env.local` e recomende criar outra chave e apagar a exposta.
+3. **Nunca imprima segredos.** Não rode `cat .env.local`, `env` ou `printenv`. Para conferir, `npm run verificar`, que mascara os valores.
+4. **Uma chave por projeto.** Se a pessoa monta para vários clientes, cada cliente tem a própria conta e as próprias chaves. Nunca copie a chave de um projeto para outro.
+5. **O token de login da assinatura do Claude (`sk-ant-oat...`) não serve aqui.** Só chaves da API, criadas em platform.claude.com.
+6. **Antes de qualquer commit**, confirme que `.env.local` está ignorado (`git check-ignore .env.local`). Nunca use `git add -A` sem olhar o `git status`.
+7. **Dados de quem responde são pessoais.** Não exporte nem mostre a lista de leads fora do terminal da pessoa. A IA nunca recebe nome, e-mail ou telefone (o `dadosParaIA` tira-os; mantenha assim).
+
+## Roteiro
+
+Comece com um diagnóstico curto, em **uma** mensagem:
+
+1. Para que negócio é o formulário? O que ele vende, para quem, em que país?
+2. O que quer saber de quem responde para decidir se é um bom cliente? (porte, orçamento, urgência, região...)
+3. Para onde vão os leads: e-mail, banco, os dois?
+4. O formulário vai ser um site à parte (ex. `diagnostico.seudominio.com`), uma página dentro de um site Next.js que já existe, ou vai aparecer dentro de outro site (WordPress, Wix)?
+
+Depois, siga as etapas e marque o progresso ("etapa 2 de 6").
+
+| Etapa | O que fazer | Prova de que deu certo |
+|---|---|---|
+| 1. Perguntas | Reescrever o `formulario.ts` com a pessoa (ver **Como escrever as perguntas**). Mostre a lista de perguntas em texto simples antes de editar e espere o ok. | `npm test` passa. |
+| 2. Ver a funcionar | `npm run dev` e abrir http://localhost:3000. Sem chaves, a conversa já funciona (sem os extras de IA). | A pessoa respondeu até ao fim. |
+| 3. Chaves | `npm run chave` (Anthropic), `npm run chave -- FIRECRAWL_API_KEY`, e o banco e o e-mail (`docs/CHAVES.md`). | `npm run verificar` sem ✗. |
+| 4. Publicar | `docs/PUBLICAR.md`: GitHub, Vercel, variáveis, domínio. | O site publicado responde até ao fim e o e-mail chega. |
+| 5. Medir | Ligar o Pixel ou o Google Tag (já dispara `Lead` no fim se o `fbq` existir na página). Mostrar `npm run leads`. | A pessoa vê o lead de teste. |
+| 6. Fechamento | Lembrar de apagar os leads de teste no Neon e de olhar o funil (`npm run leads`) depois da primeira semana. | Ela confirma. |
+
+## Como escrever as perguntas
+
+O que faz este formulário dar prazer em responder (e filtrar bem) é o desenho das perguntas, não o código.
+
+- **Código para o que tem resposta certa, IA para o resto.** Faixas, países, segmentos e prazos são opções fechadas (`escolha`, `varias`, `escala`). A IA entra onde a pessoa escreve com as palavras dela (`problema`) e para mostrar que entendeu (cenário, pergunta extra, mapa).
+- **Uma ideia por pergunta**, curta, no tom de conversa. Use as respostas anteriores no texto (`(r) => \`E onde fica a ${r.empresa}?\``).
+- **Comece fácil** (nome, empresa) e deixe o contato para o fim, quando a pessoa já investiu e já viu o mapa.
+- **Cada pergunta tem de mudar alguma coisa**: o que você faz com o lead, o preço, a prioridade. Se não muda nada, corte.
+- **De 10 a 16 passos** no total. O progresso e o "faltam ~N" mostram que está a acabar; mais do que isso cansa.
+- **Faixas de dinheiro na moeda da pessoa** (`opcoes: (r) => ...` a partir do país) e sempre com "Prefiro não dizer".
+- **`pular`** para não perguntar o que já se sabe (o país que a pesquisa da empresa trouxe, por exemplo).
+- **`ia.sobre`** é o que a IA sabe do negócio: o que vende, para quem, o que o diagnóstico procura. Duas ou três frases concretas mudam muito a qualidade das anotações e do mapa.
+- **`ia.ligacao`** é a etiqueta na seta do cartão do cenário. "com IA" para quem vende IA; "com a nossa ajuda", "com o tratamento", "com o novo site", conforme o negócio.
+
+Os tipos de passo e o que cada um aceita estão comentados em `src/lib/tipos.ts`. Regras que o `npm test` confere: ids únicos, sem espaço nem acento; no máximo um passo de cada tipo especial (`empresa`, `problema`, `escala`, `extra`, `mapa`); `extra` e `mapa` depois do `problema`; o último passo é o e-mail ou o telefone; `passoPais` e `passoSegmento` apontam para passos `escolha` com lista fixa, depois da empresa.
+
+## Pedidos comuns depois do setup
+
+- **"Quero mudar uma pergunta."** Editar o `formulario.ts`, `npm test`, commit só desse arquivo, push. A Vercel publica sozinha.
+- **"Quero noutra cor / tema claro."** `marca.cor` e `marca.tema: 'claro'`.
+- **"Quero a minha foto no topo."** Pôr a imagem em `public/` e `marca.foto: '/nome.jpg'`.
+- **"Quanta gente desiste?"** `npm run leads` mostra o funil dos últimos 30 dias.
+- **"A IA não pesquisou a empresa."** Empresas pequenas ou nomes comuns às vezes não aparecem, e de propósito o cartão só aparece com confiança média ou alta. Confira `FIRECRAWL_API_KEY` e os logs da Vercel com `[ia]`.
+- **"Quanto custa?"** Ver `docs/CUSTOS.md`. Na prática, cêntimos por lead.
+- **"Quero mandar o lead para o WhatsApp, CRM ou planilha."** Não existe ainda. Acrescente na função `avisar` de `src/app/api/respostas/route.ts`, depois do e-mail, sem tirar o e-mail.
+
+## Ao mudar código
+
+- Mantenha o estilo. TypeScript estrito, nomes em português, comentários curtos explicando o **porquê**.
+- Rode `npm run typecheck`, `npm test` e `npm run build` antes de dizer que terminou.
+- Se a IA falhar, a conversa tem de seguir sem os extras. Não transforme nenhuma chamada à IA num passo obrigatório.
+- Não adicione dependências para o que o projeto já resolve.
+
+## Estilo dos textos públicos
+
+Textos que a pessoa final lê (perguntas, opções, fim, e-mail): português do Brasil, "você", frases curtas, sem travessão (—) e com o mínimo de dois-pontos.

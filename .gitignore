@@ -1,0 +1,16 @@
+# dependências e build
+node_modules/
+.next/
+out/
+next-env.d.ts
+*.tsbuildinfo
+
+# segredos (NUNCA vão para o git)
+.env
+.env.local
+.env.*.local
+.vercel
+
+# sistema
+.DS_Store
+npm-debug.log*
