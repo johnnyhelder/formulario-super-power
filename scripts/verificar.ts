@@ -10,7 +10,8 @@ import { problemasDa } from '../src/lib/validar'
 import { MODELO } from '../src/lib/ia'
 import { mascarar } from './_env'
 
-const env = (n: string) => (process.env[n] ?? '').trim()
+// As chaves da IA aceitam o prefixo FORMULARIO_ (src/lib/env.ts).
+const env = (n: string) => ((['ANTHROPIC_API_KEY', 'ANTHROPIC_WORKSPACE_ID', 'FIRECRAWL_API_KEY'].includes(n) && process.env['FORMULARIO_' + n]) || process.env[n] || '').trim()
 let erros = 0
 const ok = (t: string) => console.log(`  ✓ ${t}`)
 const erro = (t: string) => (erros++, console.log(`  ✗ ${t}`))

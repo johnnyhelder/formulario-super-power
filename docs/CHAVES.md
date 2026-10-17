@@ -29,6 +29,31 @@ Se a chave não for aceite, o script mostra só os 7 primeiros caracteres, o tam
 
 `AVISO_PARA` e `AVISO_DE` não são segredo: pode escrevê-las direto no `.env.local`.
 
+### Num servidor com vários utilizadores
+
+O script tem de correr com o utilizador **dono do projeto** (o que é dono da pasta). Se você entrar como outro (ex. `ubuntu`), ele avisa e mostra o comando certo, por exemplo:
+
+```bash
+sudo -iu claude bash /home/claude/meu-site/scripts/definir-chave.sh ANTHROPIC_API_KEY
+```
+
+Pode chamá-lo de qualquer pasta: ele grava sempre no `.env.local` da raiz do projeto e diz onde gravou.
+
+### Num site que já usa a Anthropic para outra coisa
+
+Se o site já tem uma `ANTHROPIC_API_KEY` (de outra função), não a troque. Grave a do formulário à parte, com prefixo:
+
+```bash
+npm run chave -- ANTHROPIC_API_KEY --prefixo FORMULARIO_
+npm run chave -- FIRECRAWL_API_KEY --prefixo FORMULARIO_
+```
+
+O formulário lê primeiro `FORMULARIO_ANTHROPIC_API_KEY`, `FORMULARIO_ANTHROPIC_WORKSPACE_ID` e `FORMULARIO_FIRECRAWL_API_KEY`, e só depois as normais. Assim o gasto do formulário fica à parte (use uma chave num workspace próprio, com limite).
+
+### Projeto ligado à Vercel
+
+Se o projeto tem a pasta `.vercel/`, o script confere o login da Vercel **antes** de pedir a chave e, no fim, grava também lá. Sem login, ele para e diz para correr `npx vercel login`. Para gravar só no `.env.local`, acrescente `--sem-vercel`.
+
 Depois, confira tudo:
 
 ```bash

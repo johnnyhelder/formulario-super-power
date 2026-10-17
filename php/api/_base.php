@@ -30,6 +30,7 @@ function fd_segredos_caminho(): string
     return '';
 }
 
+// Aceita o prefixo FORMULARIO_ (ex. FORMULARIO_ANTHROPIC_API_KEY), como a versão Next (src/lib/env.ts).
 function fd_segredo(string $nome): string
 {
     static $s = null;
@@ -37,7 +38,7 @@ function fd_segredo(string $nome): string
         $caminho = fd_segredos_caminho();
         $s = $caminho ? (parse_ini_file($caminho, false, INI_SCANNER_RAW) ?: []) : [];
     }
-    return trim((string) ($s[$nome] ?? ''));
+    return trim((string) ($s['FORMULARIO_' . $nome] ?? $s[$nome] ?? ''));
 }
 
 // A pasta das conversas e dos contadores: "dados", ao lado do segredos.ini.

@@ -4,6 +4,9 @@
 #   npm run chave -- FIRECRAWL_API_KEY  (qualquer outra variável)
 # Versão PHP, no servidor (como root, por ssh -t), grava no segredos.ini fora da pasta pública:
 #   bash definir-chave.sh ANTHROPIC_API_KEY --ini /etc/formulario-super-power/segredos.ini
+# Num site que já tem a sua ANTHROPIC_API_KEY (para outra coisa), grave a do formulário à parte:
+#   npm run chave -- ANTHROPIC_API_KEY --prefixo FORMULARIO_   (vira FORMULARIO_ANTHROPIC_API_KEY)
+# --sem-vercel grava só no .env.local, mesmo com o projeto ligado à Vercel.
 # Rode num terminal a sério (não com o "!" do Claude Code: lá não há teclado para a leitura escondida).
 # 1. Lê a chave escondida e limpa o que a colagem acrescenta.  2. Se for a da Anthropic, testa com uma mensagem mínima.
 # 3. Grava no .env.local (só o seu utilizador lê).  4. Se o projeto estiver ligado à Vercel (.vercel/), grava também lá.
@@ -11,26 +14,58 @@ set -euo pipefail
 umask 077
 NOME=ANTHROPIC_API_KEY
 INI=""
+PREFIXO=""
+SEM_VERCEL=""
+ARGS=("$@")
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --ini) INI="${2:-}"; shift 2 ;;
+    --prefixo) PREFIXO="${2:-}"; shift 2 ;;
+    --sem-vercel) SEM_VERCEL=1; shift ;;
     *) NOME="$1"; shift ;;
   esac
 done
+[[ -z "$PREFIXO" || "$PREFIXO" =~ ^[A-Z][A-Z0-9_]*_$ ]] || { echo "Prefixo inválido: $PREFIXO (ex. FORMULARIO_)"; exit 1; }
+GRAVAR="${PREFIXO}${NOME}"
+WSVAR="${PREFIXO}ANTHROPIC_WORKSPACE_ID"
 ENV="${INI:-.env.local}"
+# Funciona a partir de qualquer pasta: trabalha sempre na raiz do projeto (a pasta acima de scripts/).
+SCRIPT="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
+RAIZ="$(cd "$(dirname "$0")/.." && pwd)"
+if [[ -z "$INI" ]]; then
+  cd "$RAIZ"
+  # Em servidores com vários utilizadores, o .env.local tem de ser do dono do projeto.
+  DONO="$(stat -c %U "$RAIZ" 2>/dev/null || stat -f %Su "$RAIZ")"
+  if [[ "$DONO" != "$(id -un)" ]]; then
+    echo "Este projeto ($RAIZ) é do utilizador $DONO, e você está como $(id -un). Rode assim:"
+    echo "  sudo -iu $DONO bash $SCRIPT ${ARGS[*]:-}"
+    echo "Nada foi pedido nem gravado."
+    exit 1
+  fi
+fi
 # Quem corre o PHP no servidor (para poder ler o segredos.ini e escrever na pasta dados).
 WEB="${WEB_USER:-www-data}"
 [[ "$NOME" =~ ^[A-Z][A-Z0-9_]*$ ]] || { echo "Nome de variável inválido: $NOME"; exit 1; }
 
 if [[ ! -t 0 ]]; then
   echo "Este comando precisa de um terminal a sério, onde possa colar a chave."
-  echo "Abra um terminal (fora do Claude Code), entre na pasta do projeto e rode: npm run chave -- $NOME"
+  echo "Abra um terminal (fora do Claude Code) e rode: bash $SCRIPT ${ARGS[*]:-}"
   echo "Num servidor, entre com ssh -t (o -t dá o terminal)."
 
   exit 1
 fi
 
-read -r -s -p "Cole o valor de $NOME (não aparece) e tecle Enter: " BRUTO || true
+# A Vercel confere-se ANTES de pedir a chave, para ninguém ter de colar duas vezes.
+if [[ -z "$INI" && -d .vercel && -z "$SEM_VERCEL" ]]; then
+  echo "A conferir o login na Vercel..."
+  if ! npx -y vercel whoami >/dev/null 2>&1; then
+    echo "Este projeto está ligado à Vercel, mas não há login. Rode primeiro: npx vercel login"
+    echo "(Ou acrescente --sem-vercel para gravar só no .env.local.) Nada foi pedido nem gravado."
+    exit 1
+  fi
+fi
+
+read -r -s -p "Cole o valor de $GRAVAR (não aparece) e tecle Enter: " BRUTO || true
 echo
 # Alguns terminais embrulham a colagem em marcas invisíveis (ESC[200~ ... ESC[201~) e o Windows junta \r.
 VALOR="$(printf '%s' "$BRUTO" | sed $'s/\e\\[20[01]~//g' | tr -cd '[:graph:]')"
@@ -47,7 +82,7 @@ diagnostico() {
 }
 
 WORKSPACE=""
-if [[ "$NOME" == "ANTHROPIC_API_KEY" ]]; then
+if [[ "$NOME" == *ANTHROPIC_API_KEY ]]; then
   if [[ "$VALOR" == sk-ant-oat* ]]; then
     echo "Isto é o token de login da assinatura do Claude, não uma chave da API. Crie a chave em platform.claude.com > API Keys. Nada foi gravado."
     exit 1
@@ -94,12 +129,12 @@ fi
 touch "$ENV"
 TMP="$(mktemp "$ENV.XXXXXX")"
 if [[ -n "$WORKSPACE" ]]; then
-  grep -v -e "^$NOME=" -e '^ANTHROPIC_WORKSPACE_ID=' "$ENV" > "$TMP" || true
+  grep -v -e "^$GRAVAR=" -e "^$WSVAR=" "$ENV" > "$TMP" || true
 else
-  grep -v -e "^$NOME=" "$ENV" > "$TMP" || true
+  grep -v -e "^$GRAVAR=" "$ENV" > "$TMP" || true
 fi
-printf '%s=%s\n' "$NOME" "$VALOR" >> "$TMP"
-if [[ -n "$WORKSPACE" ]]; then printf 'ANTHROPIC_WORKSPACE_ID=%s\n' "$WORKSPACE" >> "$TMP"; fi
+printf '%s=%s\n' "$GRAVAR" "$VALOR" >> "$TMP"
+if [[ -n "$WORKSPACE" ]]; then printf '%s=%s\n' "$WSVAR" "$WORKSPACE" >> "$TMP"; fi
 chmod 600 "$TMP"
 mv "$TMP" "$ENV"
 if [[ -n "$INI" ]]; then
@@ -112,18 +147,18 @@ if [[ -n "$INI" ]]; then
   chmod 640 "$INI"
   chmod 750 "$(dirname "$INI")"
   chmod 700 "$(dirname "$INI")/dados"
-  echo "Gravada em $INI."
+  echo "Gravada em $INI como $GRAVAR."
   unset VALOR
   exit 0
 fi
-echo "Gravada no .env.local."
+echo "Gravada no .env.local de $RAIZ como $GRAVAR."
 
 # Vercel, se o projeto estiver ligado (vercel link). O valor entra por stdin.
-if [[ -d .vercel ]]; then
+if [[ -d .vercel && -z "$SEM_VERCEL" ]]; then
   read -r -p "Gravar também na Vercel (Production)? [s/N] " SIM || true
   if [[ "${SIM:-}" =~ ^[sS]$ ]]; then
-    printf '%s' "$VALOR" | npx -y vercel env add "$NOME" production --sensitive --force >/dev/null
-    if [[ -n "$WORKSPACE" ]]; then printf '%s' "$WORKSPACE" | npx -y vercel env add ANTHROPIC_WORKSPACE_ID production --force >/dev/null; fi
+    printf '%s' "$VALOR" | npx -y vercel env add "$GRAVAR" production --sensitive --force >/dev/null
+    if [[ -n "$WORKSPACE" ]]; then printf '%s' "$WORKSPACE" | npx -y vercel env add "$WSVAR" production --force >/dev/null; fi
     echo "Gravada na Vercel. Para valer no site, publique de novo: npx vercel --prod"
   fi
 fi

@@ -4,6 +4,7 @@ import { FORMULARIO } from '../../../../formulario'
 import { rateLimitOrReject } from '@/lib/rate-limit'
 import { contarChamadaIA } from '@/lib/banco'
 import { sessaoValida, turnstileLigado } from '@/lib/sessao'
+import { chave as chaveDe } from '@/lib/env'
 import { dadosParaIA } from '@/lib/fluxo'
 import { MODELO, esquemasJSON, esquemasZod, iaSchema, respostasSchema, type IA } from '@/lib/ia'
 import { instrucao, instrucaoEmpresa, sistema } from '@/lib/prompts'
@@ -38,7 +39,7 @@ type Resultado = { title?: string; url?: string; description?: string }
 
 // Pesquisa pública da empresa. Falha em silêncio: sem resultados, nada de cartão.
 async function pesquisar(empresa: string): Promise<Resultado[]> {
-  const chave = process.env.FIRECRAWL_API_KEY
+  const chave = chaveDe('FIRECRAWL_API_KEY')
   if (!chave) return []
   try {
     const res = await fetch('https://api.firecrawl.dev/v2/search', {
@@ -78,7 +79,7 @@ export async function POST(request: NextRequest) {
   if (!parsed.success) return NextResponse.json({ ok: false }, { status: 400 })
   const pedido = parsed.data
 
-  const chave = process.env.ANTHROPIC_API_KEY
+  const chave = chaveDe('ANTHROPIC_API_KEY')
   if (!chave) return NextResponse.json({ ok: false }, { status: 503 })
 
   try {
@@ -100,7 +101,7 @@ export async function POST(request: NextRequest) {
         'anthropic-version': '2023-06-01',
         'content-type': 'application/json',
         // Chaves que não estão presas a um workspace precisam de o indicar.
-        ...(process.env.ANTHROPIC_WORKSPACE_ID ? { 'anthropic-workspace-id': process.env.ANTHROPIC_WORKSPACE_ID } : {}),
+        ...(chaveDe('ANTHROPIC_WORKSPACE_ID') ? { 'anthropic-workspace-id': chaveDe('ANTHROPIC_WORKSPACE_ID') } : {}),
       },
       body: JSON.stringify({
         model: MODELO,
