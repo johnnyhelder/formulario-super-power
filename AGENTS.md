@@ -23,7 +23,9 @@ Mapa do código:
 
 | Arquivo | O que faz |
 |---|---|
-| `formulario.ts` | Perguntas, opções, textos, cores, o que a IA sabe do negócio, radar, assunto do e-mail. |
+| `formulario.ts` | Língua, perguntas, opções, textos, cores, o que a IA sabe do negócio, regras de coerência, radar, assunto do e-mail. |
+| `exemplos/eventos.ts` | Um segundo exemplo, bem diferente (pedidos de orçamento de eventos, PT-PT, tema claro). Para partir dele, copie-o por cima do `formulario.ts`. |
+| `src/lib/textos.ts` | Os textos fixos da conversa em pt-BR, pt-PT, es e en. |
 | `src/lib/tipos.ts` | O que cada tipo de passo aceita (leia antes de editar o `formulario.ts`). |
 | `src/lib/fluxo.ts` | Que pergunta vem a seguir, painel, radar, o que a IA lê. Funções puras, testadas. |
 | `src/lib/validar.ts` | Confere se o `formulario.ts` está coerente. |
@@ -46,7 +48,7 @@ Mapa do código:
 
 Comece com um diagnóstico curto, em **uma** mensagem:
 
-1. Para que negócio é o formulário? O que ele vende, para quem, em que país?
+1. Para que negócio é o formulário? O que ele vende, para quem, em que país e em que língua (pt-BR, pt-PT, es, en)?
 2. O que quer saber de quem responde para decidir se é um bom cliente? (porte, orçamento, urgência, região...)
 3. Para onde vão os leads: e-mail, banco, os dois?
 4. O formulário vai ser um site à parte (ex. `diagnostico.seudominio.com`), uma página dentro de um site Next.js que já existe, ou vai aparecer dentro de outro site (WordPress, Wix)?
@@ -70,6 +72,11 @@ O que faz este formulário dar prazer em responder (e filtrar bem) é o desenho 
 - **Uma ideia por pergunta**, curta, no tom de conversa. Use as respostas anteriores no texto (`(r) => \`E onde fica a ${r.empresa}?\``).
 - **Comece fácil** (nome, empresa) e deixe o contato para o fim, quando a pessoa já investiu e já viu o mapa.
 - **Cada pergunta tem de mudar alguma coisa**: o que você faz com o lead, o preço, a prioridade. Se não muda nada, corte.
+- **Cada negócio tem as suas perguntas.** Não force o exemplo do diagnóstico: um buffet pergunta data e convidados, uma clínica pergunta o tratamento, uma loja pergunta o produto. Use `exemplos/eventos.ts` como segundo modelo e `pular` para ramos (perguntas só para empresas, só para casamentos).
+- **Catálogo (`sugestao`)** quando o negócio tem serviços ou planos: a IA escolhe os que encaixam no que a pessoa contou, com o porquê, e a pessoa confirma. É aqui que nasce a venda de dois serviços em vez de um.
+- **Data (`data`)** para eventos, reservas e prazos. Se houver agenda, ligue `disponibilidade` (a pessoa sabe na hora se a data está livre).
+- **Resumo (`resumo`)** antes do contato, para a pessoa confirmar que entendemos bem.
+- **Coerência (`coerencia`)**: combinações que parecem engano (300 convidados com 200 € de orçamento) fazem a conversa perguntar com educação se está certo, e deixam corrigir. Se a pessoa confirmar, o pedido chega marcado [REVER À MÃO]. A IA também marca pedidos sem relação com o negócio.
 - **De 10 a 16 passos** no total. O progresso e o "faltam ~N" mostram que está a acabar; mais do que isso cansa.
 - **Faixas de dinheiro na moeda da pessoa** (`opcoes: (r) => ...` a partir do país) e sempre com "Prefiro não dizer".
 - **`pular`** para não perguntar o que já se sabe (o país que a pesquisa da empresa trouxe, por exemplo).
@@ -82,6 +89,8 @@ Os tipos de passo e o que cada um aceita estão comentados em `src/lib/tipos.ts`
 
 - **"Quero mudar uma pergunta."** Editar o `formulario.ts`, `npm test`, commit só desse arquivo, push. A Vercel publica sozinha.
 - **"Quero noutra cor / tema claro."** `marca.cor` e `marca.tema: 'claro'`.
+- **"O meu cliente é de Portugal / Espanha."** `idioma: 'pt-PT'` (ou `es`, `en`) e reescreva as perguntas nessa língua. Os botões, avisos e a IA mudam sozinhos.
+- **"Recebo pedidos de robôs."** Ligar o Turnstile da Cloudflare (`NEXT_PUBLIC_TURNSTILE_SITE_KEY` e `TURNSTILE_SECRET_KEY`, ver `docs/CHAVES.md`). Com ele, a IA só responde a quem passou pela Cloudflare, e o pedido de quem não passou fica gravado como suspeito, sem aviso.
 - **"Quero a minha foto no topo."** Pôr a imagem em `public/` e `marca.foto: '/nome.jpg'`.
 - **"Quanta gente desiste?"** `npm run leads` mostra o funil dos últimos 30 dias.
 - **"A IA não pesquisou a empresa."** Empresas pequenas ou nomes comuns às vezes não aparecem, e de propósito o cartão só aparece com confiança média ou alta. Confira `FIRECRAWL_API_KEY` e os logs da Vercel com `[ia]`.
@@ -102,4 +111,4 @@ Os tipos de passo e o que cada um aceita estão comentados em `src/lib/tipos.ts`
 
 ## Estilo dos textos públicos
 
-Textos que a pessoa final lê (perguntas, opções, fim, e-mail): português do Brasil, "você", frases curtas, sem travessão (—) e com o mínimo de dois-pontos.
+Textos que a pessoa final lê (perguntas, opções, fim, e-mail): na língua do `idioma` (pt-BR com "você"; pt-PT com o vocabulário de Portugal), frases curtas, sem travessão (—) e com o mínimo de dois-pontos.

@@ -42,9 +42,16 @@ export type NotasIA = {
   iconeTrava: string
   iconeChegar: string
   niveis: Record<string, Nivel>
+  // false = o texto não parece ter a ver com o negócio (ou está numa língua estranha): rever à mão.
+  relacionado: boolean
 }
 
 export type PerguntaIA = { pergunta: string; opcoes: string[]; palpite: string }
+
+export type SugestaoIA = { nome: string; motivo: string }
+
+// Uma chamada só, depois do texto principal: a pergunta extra e as sugestões do catálogo.
+export type AprofundarIA = Partial<PerguntaIA> & { sugestoes?: SugestaoIA[] }
 
 export type MapaIA = {
   problema: string
@@ -61,8 +68,10 @@ export type IA = {
   notas?: NotasIA
   notasTexto?: string
   pergunta?: PerguntaIA
+  sugestoes?: SugestaoIA[]
   mapa?: MapaIA
   ajusteMapa?: string
+  resumo?: string
 }
 
 function opcoesDoPasso(config: Config, id: string | undefined): string[] {
@@ -81,6 +90,12 @@ export function paisesDe(config: Config): string[] {
 export function segmentosDe(config: Config): string[] {
   return opcoesDoPasso(config, passoEmpresa(config)?.passoSegmento)
 }
+
+export function passoSugestao(config: Config): Extract<Passo, { tipo: 'sugestao' }> | undefined {
+  return config.passos.find((p): p is Extract<Passo, { tipo: 'sugestao' }> => p.tipo === 'sugestao')
+}
+
+const temExtra = (config: Config) => config.passos.some((p) => p.tipo === 'extra')
 
 // Os eixos do radar que a IA mede (os outros, o código mede pelas respostas).
 export function eixosIA(config: Config) {
@@ -123,8 +138,15 @@ export function esquemasJSON(config: Config) {
       iconeTrava: enumDe(ICONES),
       iconeChegar: enumDe(ICONES),
       niveis: objeto(Object.fromEntries(eixosIA(config).map((e) => [e.nome, enumDe(NIVEIS)]))),
+      relacionado: { type: 'boolean' },
     }),
-    pergunta: objeto({ pergunta: texto, opcoes: { type: 'array', items: texto }, palpite: texto }),
+    aprofundar: objeto({
+      ...(temExtra(config) ? { pergunta: texto, opcoes: { type: 'array', items: texto }, palpite: texto } : {}),
+      ...(passoSugestao(config)
+        ? { sugestoes: { type: 'array', items: objeto({ nome: enumDe(passoSugestao(config)!.catalogo.map((c) => c.nome)), motivo: texto }) } }
+        : {}),
+    }),
+    resumo: objeto({ frase: texto }),
     mapa: objeto({
       problema: texto,
       causas: { type: 'array', items: objeto({ texto, ligacao: texto }) },
@@ -164,12 +186,18 @@ export function esquemasZod(config: Config) {
       iconeTrava: umDe(ICONES),
       iconeChegar: umDe(ICONES),
       niveis: z.record(z.string(), nivel),
+      relacionado: z.boolean(),
     }),
-    pergunta: z.object({
-      pergunta: z.string().max(160),
-      opcoes: z.array(z.string().max(60)).max(5),
-      palpite: z.string().max(200),
+    aprofundar: z.object({
+      pergunta: z.string().max(160).optional(),
+      opcoes: z.array(z.string().max(60)).max(5).optional(),
+      palpite: z.string().max(200).optional(),
+      sugestoes: z
+        .array(z.object({ nome: umDe(passoSugestao(config)?.catalogo.map((c) => c.nome) ?? []), motivo: z.string().max(140) }))
+        .transform((s) => s.slice(0, passoSugestao(config)?.maximo ?? 3))
+        .optional(),
     }),
+    resumo: z.object({ frase: z.string().max(300) }),
     mapa: z.object({
       problema: z.string().max(70),
       causas: z.array(z.object({ texto: z.string().max(60), ligacao: z.string().max(30) })).max(3),

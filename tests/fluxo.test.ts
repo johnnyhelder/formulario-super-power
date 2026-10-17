@@ -1,7 +1,8 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { FORMULARIO as C } from '../formulario'
-import { CONFIRMAR, dadosParaIA, linhasResumo, proxima, radarValores } from '../src/lib/fluxo'
+import { CONFIRMAR, OK_REGRA, dadosParaIA, dataLegivel, linhasResumo, motivosParaRever, proxima, radarValores, regraPendente } from '../src/lib/fluxo'
+import { FORMULARIO as EVENTOS } from '../exemplos/eventos'
 import type { EmpresaIA } from '../src/lib/ia'
 
 const achada = (confianca: EmpresaIA['confianca']): EmpresaIA => ({
@@ -24,7 +25,7 @@ test('pula o país quando a empresa confirmada já o trouxe', () => {
 })
 
 test('a pergunta extra e o mapa só entram quando a IA os preparou', () => {
-  assert.equal(proxima(C, 'ticket', {}, {}), 'momento')
+  assert.equal(proxima(C, 'ticket', {}, {}), 'solucoes')
   assert.equal(proxima(C, 'ticket', {}, { pergunta: { pergunta: 'Quem responde?', opcoes: ['Eu'], palpite: '' } }), 'extra')
   assert.equal(proxima(C, 'momento', {}, {}), 'email')
 })
@@ -48,4 +49,33 @@ test('a IA não recebe nome, e-mail nem telefone', () => {
   const d = dadosParaIA(C, { nome: 'Ana', email: 'ana@x.pt', whatsapp: '+351 900', empresa: 'Padaria Sol' }, {})
   assert.ok(d.includes('Padaria Sol'))
   assert.ok(!d.includes('Ana') && !d.includes('ana@x.pt') && !d.includes('+351'))
+})
+
+test('depois de corrigir uma resposta antiga, a conversa retoma no que falta', () => {
+  const r = { nome: 'Ana', empresa: '', pais: 'Brasil', segmento: 'Outro', problema: 'x', papel: 'Dono ou sócio', pessoas: 'Mais de 200' }
+  assert.equal(proxima(C, 'faturamento', r, {}), 'canais')
+})
+
+test('a regra de coerência pergunta uma vez e para quando a pessoa confirma', () => {
+  const r = { faturamento: 'Até 5 mil €', pessoas: 'Mais de 200' }
+  assert.equal(regraPendente(C, r)?.id, 'porte')
+  assert.equal(regraPendente(C, { ...r, [OK_REGRA + 'porte']: 'sim' }), undefined)
+  assert.equal(regraPendente(C, { ...r, faturamento: '20 a 100 mil €' }), undefined)
+  assert.equal(motivosParaRever(C, { ...r, [OK_REGRA + 'porte']: 'sim' }, {}).length, 1)
+})
+
+test('pedido sem relação com o negócio chega marcado para rever', () => {
+  const notas = { notas: [], area: 'vendas', cenario: '', trava: '', chegar: '', iconeCenario: 'ia', iconeTrava: 'ia', iconeChegar: 'ia', niveis: {}, relacionado: false }
+  assert.equal(motivosParaRever(C, {}, { notas }).length, 1)
+})
+
+test('datas aparecem por extenso na língua do formulário', () => {
+  assert.equal(dataLegivel(C, '2027-06-14'), '14 de junho de 2027')
+  assert.equal(dataLegivel(EVENTOS, '2027-06-14'), '14 de junho de 2027')
+  assert.equal(dataLegivel(C, 'Ainda não sei'), 'Ainda não sei')
+})
+
+test('no exemplo de eventos, a empresa só é perguntada em evento de empresa', () => {
+  assert.equal(proxima(EVENTOS, 'evento', { nome: 'Rita', evento: 'Casamento' }, {}), 'data')
+  assert.equal(proxima(EVENTOS, 'evento', { nome: 'Rita', evento: 'Evento de empresa' }, {}), 'empresa')
 })

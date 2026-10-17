@@ -1,4 +1,4 @@
-import type { Config, Respostas } from './src/lib/tipos'
+import type { Config, Respostas } from '@/lib/tipos'
 
 // ═══════════════════════════════════════════════════════════════════════
 //  O ÚNICO ARQUIVO QUE VOCÊ PRECISA EDITAR
@@ -8,8 +8,10 @@ import type { Config, Respostas } from './src/lib/tipos'
 //
 // Este exemplo é um diagnóstico para uma agência que implanta IA em
 // pequenas e médias empresas de Portugal e do Brasil. Troque pelo seu caso.
-// Tipos de passo: texto, escolha, varias, empresa, problema, escala, extra,
-// mapa, email, telefone. Veja o que cada um faz em src/lib/tipos.ts.
+// Outro exemplo, bem diferente (eventos, em PT-PT): exemplos/eventos.ts.
+// Para partir dele, copie-o por cima deste arquivo.
+// Tipos de passo: texto, escolha, varias, empresa, problema, escala, data,
+// sugestao, extra, resumo, mapa, email, telefone. Veja cada um em src/lib/tipos.ts.
 
 // Uma mão para escrever "a Padaria Sol" ou "o seu negócio".
 const empresa = (r: Respostas, com: string, sem: string) => (r.empresa ? `${com} ${r.empresa}` : sem)
@@ -17,6 +19,9 @@ const empresa = (r: Respostas, com: string, sem: string) => (r.empresa ? `${com}
 const EUR = (r: Respostas) => r.pais !== 'Brasil'
 
 export const FORMULARIO: Config = {
+  // pt-BR, pt-PT, es ou en. Muda os textos fixos e a língua da IA; as perguntas abaixo escreve-as você.
+  idioma: 'pt-BR',
+
   marca: {
     nome: 'Sua Marca',
     subtitulo: 'vamos achar o melhor caminho para você',
@@ -144,6 +149,21 @@ export const FORMULARIO: Config = {
     },
     { id: 'extra', tipo: 'extra', pergunta: '' },
     {
+      id: 'solucoes',
+      tipo: 'sugestao',
+      pergunta: 'Pelo que você contou, estas soluções encaixam. Quer tirar ou pôr alguma?',
+      nota: 'Pode marcar mais de uma.',
+      catalogo: [
+        { nome: 'Atendimento automático no WhatsApp', descricao: 'responde, qualifica e agenda a qualquer hora' },
+        { nome: 'Orçamentos automáticos', descricao: 'propostas e orçamentos montados em minutos' },
+        { nome: 'Assistente com os dados da empresa', descricao: 'a equipe pergunta e ele responde com os documentos internos' },
+        { nome: 'Conteúdo e marketing com IA', descricao: 'posts, anúncios e e-mails' },
+        { nome: 'Relatórios automáticos', descricao: 'números do negócio reunidos sem planilha manual' },
+        { nome: 'Formação da equipe em IA' },
+      ],
+      resumo: 'Soluções',
+    },
+    {
       id: 'momento',
       tipo: 'escolha',
       pergunta: 'Última sobre o projeto. Em que momento você está?',
@@ -194,6 +214,17 @@ export const FORMULARIO: Config = {
       { nome: 'informação solta', valor: (r) => (Array.isArray(r.canais) ? Math.min(1, r.canais.length / 4) : undefined) },
     ],
   },
+
+  // Combinações que parecem engano. A conversa pergunta com educação e deixa corrigir.
+  coerencia: [
+    {
+      id: 'porte',
+      quando: (r) => r.pessoas === 'Mais de 200' && (r.faturamento === 'Até 5 mil €' || r.faturamento === 'Até R$ 20 mil'),
+      pergunta: (r) => `Só para confirmar, são mais de 200 pessoas e faturamento ${String(r.faturamento).toLowerCase()} por mês? Se foi engano na escolha, corrijo agora.`,
+      corrigir: 'faturamento',
+      botao: 'Corrigir o faturamento',
+    },
+  ],
 
   aviso: {
     assunto: (r) => `Novo lead qualificado: ${r.nome}${r.empresa ? ` - ${r.empresa}` : ''}`,

@@ -7,6 +7,8 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { DESCONHECIDO, type EmpresaIA, type MapaIA, type NotasIA } from '@/lib/ia'
+import { TEXTOS } from '@/lib/textos'
+import { FORMULARIO } from '../../formulario'
 
 // Os cartões que aparecem no meio da conversa e o painel lateral.
 // Tudo desenhado com código a partir das respostas (e do que a IA devolveu).
@@ -17,6 +19,8 @@ const ICONES: Record<string, LucideIcon> = {
   telefone: Phone, email: Mail, financeiro: Receipt, estoque: Package, loja: Store, automacao: Workflow,
   alvo: Target, alerta: TriangleAlert,
 }
+
+const T = TEXTOS[FORMULARIO.idioma]
 
 function semMovimento(): boolean {
   return typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -34,7 +38,7 @@ export function CartaoEmpresa({ empresa }: { empresa: EmpresaIA }) {
         <span className="fd-empresa-inicial" aria-hidden="true">{empresa.nome.trim().charAt(0).toUpperCase()}</span>
         <div>
           <p className="fd-empresa-nome">{empresa.nome}</p>
-          {onde && <p className="fd-cartao-sub">{onde}{empresa.fundada ? ` · desde ${empresa.fundada}` : ''}</p>}
+          {onde && <p className="fd-cartao-sub">{onde}{empresa.fundada ? ` · ${T.desde(empresa.fundada)}` : ''}</p>}
         </div>
       </div>
       <p className="fd-empresa-desc">{empresa.descricao}</p>
@@ -43,7 +47,7 @@ export function CartaoEmpresa({ empresa }: { empresa: EmpresaIA }) {
           {dominio}
         </a>
       )}
-      <p className="fd-cartao-sub">Encontrado agora numa pesquisa pública na internet</p>
+      <p className="fd-cartao-sub">{T.empresaFonte}</p>
     </div>
   )
 }
@@ -56,7 +60,7 @@ export function CartaoCenario({ notas, ligacao }: { notas: NotasIA; ligacao: str
   const IconeC = ICONES[notas.iconeChegar] ?? Target
   return (
     <div className="fd-cartao">
-      <p className="fd-cartao-rot">O seu cenário, desenhado agora a partir do que você escreveu</p>
+      <p className="fd-cartao-rot">{T.cenarioRotulo}</p>
       <div className="fd-cena" aria-hidden="true">
         <span className="fd-no fd-no-a"><IconeA size={26} strokeWidth={1.5} /></span>
         <span className="fd-fio" />
@@ -65,9 +69,9 @@ export function CartaoCenario({ notas, ligacao }: { notas: NotasIA; ligacao: str
         <span className="fd-no fd-no-c"><IconeC size={26} strokeWidth={1.5} /></span>
       </div>
       <dl className="fd-tres">
-        <div><dt className="fd-cor-a">O cenário</dt><dd>{notas.cenario}</dd></div>
-        <div><dt className="fd-cor-b">O que trava</dt><dd>{notas.trava}</dd></div>
-        <div><dt className="fd-cor-c">Onde quer chegar</dt><dd>{notas.chegar}</dd></div>
+        <div><dt className="fd-cor-a">{T.cenario}</dt><dd>{notas.cenario}</dd></div>
+        <div><dt className="fd-cor-b">{T.trava}</dt><dd>{notas.trava}</dd></div>
+        <div><dt className="fd-cor-c">{T.chegar}</dt><dd>{notas.chegar}</dd></div>
       </dl>
     </div>
   )
@@ -173,7 +177,7 @@ function PixelEmpresa({ bonecos }: { bonecos: number }) {
     return () => cancelAnimationFrame(pedido)
   }, [bonecos])
 
-  return <canvas ref={ref} className="fd-pixel" role="img" aria-label={`Desenho de uma empresa com ${bonecos} pessoas a trabalhar`} />
+  return <canvas ref={ref} className="fd-pixel" role="img" aria-label={T.desenhoEmpresa(bonecos)} />
 }
 
 export function CartaoEscala({
@@ -185,9 +189,9 @@ export function CartaoEscala({
       {destaque && <p className="fd-grande">{destaque}</p>}
       <PixelEmpresa bonecos={bonecos} />
       <p className="fd-escala-legenda">
-        <strong>{pessoas}</strong> {/\d/.test(pessoas) ? 'pessoas' : ''}{sub ? ` · ${sub}` : ''}
+        <strong>{pessoas}</strong> {/\d/.test(pessoas) ? T.pessoas : ''}{sub ? ` · ${sub}` : ''}
       </p>
-      <p className="fd-cartao-sub">cada bonequinho é uma pessoa</p>
+      <p className="fd-cartao-sub">{T.bonequinho}</p>
     </div>
   )
 }
@@ -197,7 +201,7 @@ export function CartaoEscala({
 export function CartaoMapa({ mapa, cabeca, sub }: { mapa: MapaIA; cabeca: string; sub: string }) {
   return (
     <div className="fd-cartao fd-mapa">
-      <p className="fd-cartao-rot">O mapa do seu caso</p>
+      <p className="fd-cartao-rot">{T.mapaRotulo}</p>
       <div className="fd-mapa-no fd-mapa-raiz">
         <strong>{cabeca}</strong>
         <span>{sub}</span>
@@ -205,7 +209,7 @@ export function CartaoMapa({ mapa, cabeca, sub }: { mapa: MapaIA; cabeca: string
       <span className="fd-mapa-seta" />
       <div className="fd-mapa-no fd-mapa-problema">
         <strong>{mapa.problema}</strong>
-        <span>O problema</span>
+        <span>{T.oProblema}</span>
       </div>
       <span className="fd-mapa-seta" />
       <div className="fd-mapa-causas">
@@ -221,9 +225,9 @@ export function CartaoMapa({ mapa, cabeca, sub }: { mapa: MapaIA; cabeca: string
       <span className="fd-mapa-seta" />
       <div className="fd-mapa-no fd-mapa-objetivo">
         <strong>{mapa.objetivo}</strong>
-        <span>Onde quer chegar</span>
+        <span>{T.chegar}</span>
       </div>
-      <span className="fd-mapa-seta"><em>começar por</em></span>
+      <span className="fd-mapa-seta"><em>{T.comecarPor}</em></span>
       <div className="fd-mapa-no">
         <strong>{mapa.primeiroPasso}</strong>
       </div>
@@ -232,7 +236,7 @@ export function CartaoMapa({ mapa, cabeca, sub }: { mapa: MapaIA; cabeca: string
           {mapa.ajustes.map((a) => (
             <div key={a} className="fd-mapa-no fd-mapa-ajuste">
               <strong>{a}</strong>
-              <span>Ajustado</span>
+              <span>{T.ajustado}</span>
             </div>
           ))}
         </div>
@@ -245,7 +249,7 @@ export function CartaoMapa({ mapa, cabeca, sub }: { mapa: MapaIA; cabeca: string
 
 export function Resumo({ linhas }: { linhas: [string, string][] }) {
   if (linhas.length === 0) {
-    return <p className="fd-painel-vazio">Ele se escreve sozinho enquanto você responde.</p>
+    return <p className="fd-painel-vazio">{T.resumoVazio}</p>
   }
   return (
     <dl className="fd-resumo">
@@ -295,7 +299,7 @@ export function Radar({ eixos, valores }: { eixos: string[]; valores: number[] }
   const forma = atual.map((v, i) => ponto(i, raio * (0.12 + 0.88 * v)).join(',')).join(' ')
 
   return (
-    <svg viewBox="-46 -4 332 196" className="fd-radar" role="img" aria-label={`Leitura do seu caso em ${eixos.length} eixos`}>
+    <svg viewBox="-46 -4 332 196" className="fd-radar" role="img" aria-label={T.radarRotulo(eixos.length)}>
       {[0.33, 0.66, 1].map((n) => (
         <polygon
           key={n}
@@ -322,7 +326,7 @@ export function Radar({ eixos, valores }: { eixos: string[]; valores: number[] }
 
 export function Digitando() {
   return (
-    <div className="fd-bolha fd-bot fd-digitando" aria-label="A escrever">
+    <div className="fd-bolha fd-bot fd-digitando" aria-label={T.digitando}>
       <span /><span /><span />
     </div>
   )

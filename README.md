@@ -34,8 +34,10 @@ Formulário comprido cansa e filtra mal. A pessoa desiste no meio, ou responde q
 - **Grava cada resposta**, não só as conversas concluídas. `npm run leads` mostra onde as pessoas desistem.
 - **Aviso a cada lead** por e-mail, e opcionalmente no Telegram ou num webhook (n8n, Make, CRM), com todas as respostas, o mapa e a origem do anúncio (`utm_*`).
 - **Modo de teste.** Abra com `?teste=1`. O pedido fica marcado, o aviso vai com [TESTE] e `npm run leads -- apagar-testes` limpa tudo.
+- **Pergunta com educação quando algo parece engano.** "Só para confirmar, mais de 200 convidados com um investimento até 300 €?" A pessoa corrige ali mesmo, ou confirma e o pedido chega marcado para rever à mão.
+- **Na língua do cliente.** pt-BR, pt-PT, espanhol ou inglês, com a IA a escrever na mesma língua.
 - **Funciona sem IA.** Sem chaves, ou se a IA falhar, a conversa segue com as perguntas fixas.
-- **Proteção contra robôs e abuso.** Campo escondido, tempo mínimo, limite de chamadas por pessoa e teto diário de chamadas à IA.
+- **Proteção contra robôs e abuso.** Cloudflare Turnstile (opcional, grátis), campo escondido, tempo mínimo, limite de chamadas por pessoa e teto diário de chamadas à IA.
 
 ## Começo rápido com o Claude Code
 
@@ -82,11 +84,14 @@ Abra http://localhost:3000. A conversa já funciona sem nenhuma chave, só sem o
 | `varias` | Marcar várias e tocar em "Pronto". |
 | `problema` | Texto livre com anotações ao vivo e o cartão do cenário. |
 | `escala` | Tamanho da equipe, com o desenho em bonequinhos. |
+| `data` | Calendário, com "Ainda não sei" e, se quiser, a resposta na hora se a data está livre. |
+| `sugestao` | A IA escolhe do seu catálogo os serviços que encaixam, com o porquê, e a pessoa confirma. |
+| `resumo` | Uma frase a resumir o pedido, com "Está certo" e "Corrigir". |
 | `extra` | A pergunta criada pela IA. |
 | `mapa` | O mapa do caso, para confirmar ou ajustar. |
 | `email`, `telefone` | O contato, no fim. |
 
-Qualquer passo aceita `pular` (para não perguntar o que já se sabe) e textos que usam as respostas anteriores (`(r) => \`E onde fica a ${r.empresa}?\``).
+Cada negócio tem as suas perguntas. O `formulario.ts` traz um diagnóstico para uma agência de IA; `exemplos/eventos.ts` traz pedidos de orçamento de eventos, em PT-PT. Qualquer passo aceita `pular` (para não perguntar o que já se sabe, ou para ramos) e textos que usam as respostas anteriores (`(r) => \`E onde fica a ${r.empresa}?\``).
 
 ## Quanto custa
 

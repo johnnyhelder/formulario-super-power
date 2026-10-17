@@ -63,7 +63,12 @@ async function main() {
   if (env('DATABASE_URL')) ok(`teto de ${Number(env('IA_TETO_DIARIO')) || 1500} chamadas à IA por dia (IA_TETO_DIARIO)`)
   else if (env('ANTHROPIC_API_KEY')) aviso('Sem banco não há teto diário de chamadas à IA, só o limite por pessoa. Ponha um limite de gasto na conta da Anthropic.')
 
-  secao('5. Avisos de lead novo')
+  secao('5. Anti-robô (Turnstile)')
+  if (env('NEXT_PUBLIC_TURNSTILE_SITE_KEY') && env('TURNSTILE_SECRET_KEY')) ok('Turnstile ligado: a IA só responde a quem passou pela Cloudflare')
+  else if (env('NEXT_PUBLIC_TURNSTILE_SITE_KEY') || env('TURNSTILE_SECRET_KEY')) erro('Falta uma das duas chaves do Turnstile (precisa das duas).')
+  else aviso('Turnstile desligado. Recomendado antes de pôr anúncios.')
+
+  secao('6. Avisos de lead novo')
   const temEmail = Boolean(env('RESEND_API_KEY') && env('AVISO_PARA'))
   const temTelegram = Boolean(env('AVISO_TELEGRAM_TOKEN') && env('AVISO_TELEGRAM_CHAT'))
   if (temEmail) ok(`e-mail para ${env('AVISO_PARA')} a partir de ${env('AVISO_DE') || 'onboarding@resend.dev (só entrega ao dono da conta Resend)'}`)

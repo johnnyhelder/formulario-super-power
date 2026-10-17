@@ -235,3 +235,18 @@ button, input, textarea { font: inherit; }
 .fd-empresa-nome { margin: 0; font-size: 1.0625rem; font-weight: 600; letter-spacing: -0.01em; }
 .fd-empresa-desc { margin: 0; font-size: 0.9375rem; line-height: 1.5; }
 .fd-empresa-site { justify-self: start; font-family: var(--fonte-mono), ui-monospace, monospace; font-size: 0.8125rem; color: var(--cor-a); text-decoration: underline; text-underline-offset: 3px; }
+
+/* Sugestões do catálogo: o porquê de cada uma, por cima das opções. */
+.fd-porques { list-style: none; margin: 0; padding: 0.75rem 0.95rem; display: grid; gap: 0.45rem; border-radius: 12px; border: 1px solid var(--regra); animation: fd-surge 260ms both; }
+.fd-porques li { font-size: 0.875rem; line-height: 1.45; color: var(--tinta-fraca); }
+.fd-porques strong { display: block; color: var(--tinta); font-weight: 600; }
+
+/* Resumo do pedido para confirmar. */
+.fd-resumo-cartao { border-color: color-mix(in srgb, var(--cor-c) 45%, transparent); }
+.fd-resumo-frase { margin: 0; font-size: 1.0625rem; line-height: 1.5; letter-spacing: -0.01em; }
+
+/* Calendário: o campo de data ocupa a linha toda. */
+.fd-escrever input[type="date"] { min-height: 2.4rem; }
+
+/* Turnstile: só ocupa espaço se a Cloudflare mostrar um desafio. */
+.fd-turnstile:empty { display: none; }

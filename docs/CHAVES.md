@@ -24,6 +24,8 @@ Se a chave não for aceite, o script mostra só os 7 primeiros caracteres, o tam
 | `AVISO_TELEGRAM_TOKEN`, `AVISO_TELEGRAM_CHAT` | @BotFather no Telegram; o chat id aparece em `https://api.telegram.org/bot<TOKEN>/getUpdates` depois de mandar uma mensagem ao bot | Aviso no telemóvel a cada lead. | Só e-mail. |
 | `AVISO_WEBHOOK_URL` | O seu n8n, Make, Zapier ou CRM | Recebe cada lead em JSON. | |
 | `IA_TETO_DIARIO` | (não é segredo) | Máximo de chamadas à IA por dia no site inteiro (precisa do banco). | 1500. |
+| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | dash.cloudflare.com > Turnstile > Add widget (o domínio do formulário, modo "Managed"). Não é segredo. | Anti-robô: a IA só responde a quem passou pela Cloudflare. | Sem anti-robô (ficam o limite por pessoa e o teto diário). |
+| `TURNSTILE_SECRET_KEY` | Mesma tela, "Secret Key" | O servidor confirma com a Cloudflare. | |
 
 `AVISO_PARA` e `AVISO_DE` não são segredo: pode escrevê-las direto no `.env.local`.
 

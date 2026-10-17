@@ -1,10 +1,12 @@
 import type { Config } from './tipos'
+import { IDIOMAS } from './textos'
 
 // Confere se o formulario.ts está coerente. Devolve a lista de problemas,
 // em português, para a pessoa (ou a LLM) corrigir. Vazia = tudo certo.
 // Usado por `npm test` e `npm run verificar`.
 export function problemasDa(config: Config): string[] {
   const erros: string[] = []
+  if (!IDIOMAS.includes(config.idioma)) erros.push(`idioma tem de ser um destes: ${IDIOMAS.join(', ')}.`)
   const ids = config.passos.map((p) => p.id)
   const porId = new Map(config.passos.map((p) => [p.id, p]))
 
@@ -15,7 +17,7 @@ export function problemasDa(config: Config): string[] {
     if (ids.filter((x) => x === id).length > 1) erros.push(`O id "${id}" aparece em mais de um passo.`)
   }
 
-  for (const tipo of ['empresa', 'problema', 'escala', 'extra', 'mapa'] as const) {
+  for (const tipo of ['empresa', 'problema', 'escala', 'extra', 'mapa', 'sugestao', 'resumo'] as const) {
     if (config.passos.filter((p) => p.tipo === tipo).length > 1) erros.push(`Só pode haver um passo do tipo "${tipo}".`)
   }
 
@@ -28,7 +30,7 @@ export function problemasDa(config: Config): string[] {
 
   const posicao = (tipo: string) => config.passos.findIndex((p) => p.tipo === tipo)
   const problema = posicao('problema')
-  for (const tipo of ['extra', 'mapa']) {
+  for (const tipo of ['extra', 'mapa', 'sugestao']) {
     const i = posicao(tipo)
     if (i >= 0 && (problema < 0 || i < problema)) erros.push(`O passo "${tipo}" precisa de vir depois do passo do tipo "problema" (a IA parte dele).`)
   }
@@ -56,6 +58,27 @@ export function problemasDa(config: Config): string[] {
     if (p.tipo === 'escala' && p.opcoes.some((o) => o.bonecos < 1 || o.bonecos > 300)) {
       erros.push(`No passo "${p.id}", os bonecos vão de 1 a 300.`)
     }
+    if (p.tipo === 'sugestao') {
+      const nomes = p.catalogo.map((c) => c.nome)
+      if (nomes.length < 2) erros.push(`O passo "${p.id}" precisa de pelo menos 2 itens no catálogo.`)
+      if (new Set(nomes).size !== nomes.length) erros.push(`O passo "${p.id}" tem itens repetidos no catálogo.`)
+      if (nomes.some((n) => n.length > 80)) erros.push(`O passo "${p.id}" tem itens com mais de 80 caracteres.`)
+    }
+    if (p.tipo === 'data') {
+      if ((p.minDias ?? 0) > (p.maxDias ?? 730)) erros.push(`No passo "${p.id}", minDias é maior do que maxDias.`)
+      if (p.disponibilidade && !/^(https:\/\/|\/)/.test(p.disponibilidade.url)) {
+        erros.push(`No passo "${p.id}", disponibilidade.url tem de começar por https:// ou /.`)
+      }
+    }
+  }
+
+  const contatos = new Set([email, telefone])
+  const regras = config.coerencia ?? []
+  if (new Set(regras.map((g) => g.id)).size !== regras.length) erros.push('Há regras de coerência com o mesmo id.')
+  for (const g of regras) {
+    if (!/^[a-zA-Z][a-zA-Z0-9_]{0,30}$/.test(g.id)) erros.push(`O id da regra "${g.id}" só pode ter letras, números e _.`)
+    if (!porId.has(g.corrigir)) erros.push(`A regra "${g.id}" manda corrigir "${g.corrigir}", que não é um passo.`)
+    else if (contatos.has(g.corrigir)) erros.push(`A regra "${g.id}" não pode mandar corrigir o contato.`)
   }
 
   if (config.ia.areas.length === 0) erros.push('ia.areas precisa de pelo menos uma área.')

@@ -4,7 +4,9 @@ import { FORMULARIO } from '../../../../formulario'
 import { rateLimitOrReject } from '@/lib/rate-limit'
 import { gravar } from '@/lib/banco'
 import { iaSchema, respostasSchema, type IA } from '@/lib/ia'
-import { linhasResumo } from '@/lib/fluxo'
+import { linhasResumo, motivosParaRever } from '@/lib/fluxo'
+import { sessaoValida, turnstileLigado } from '@/lib/sessao'
+import { TEXTOS } from '@/lib/textos'
 import type { Respostas } from '@/lib/tipos'
 
 // Cada resposta grava a conversa (para medir onde as pessoas desistem).
@@ -47,7 +49,9 @@ export async function POST(request: NextRequest) {
   const teste = Boolean(envio.teste)
 
   const concluido = Boolean(contato)
-  const suspeito = Boolean(site) || (concluido && (duracaoSeg ?? 0) < DURACAO_MINIMA_SEG)
+  // Com Turnstile ligado, quem não passou pela Cloudflare fica gravado, mas como suspeito (sem aviso).
+  const semTurnstile = turnstileLigado() && !sessaoValida(request.headers.get('x-sessao-ia'))
+  const suspeito = Boolean(site) || semTurnstile || (concluido && (duracaoSeg ?? 0) < DURACAO_MINIMA_SEG)
 
   try {
     const { jaConcluida } = await gravar({
@@ -75,28 +79,36 @@ const escapar = (s: unknown) =>
 // Cada canal falha sozinho: um Telegram em baixo não impede o e-mail.
 async function avisar(envio: Envio, teste: boolean) {
   const C = FORMULARIO
+  const T = TEXTOS[C.idioma]
   const r: Respostas = envio.respostas
   const ia = envio.ia as IA
   const contato = envio.contato!
   const problema = C.passos.find((p) => p.tipo === 'problema')
   const extra = C.passos.find((p) => p.tipo === 'extra')
-  const assunto = `${teste ? '[TESTE] ' : ''}${C.aviso.assunto(r)}`
+  // Pedido incoerente ou sem relação com o negócio: chega marcado, para ninguém responder no automático.
+  const motivos = motivosParaRever(C, r, ia)
+  const assunto = `${teste ? '[TESTE] ' : ''}${motivos.length ? `[${T.rever.toUpperCase()}] ` : ''}${C.aviso.assunto(r)}`
+  const resumo = C.passos.find((p) => p.tipo === 'resumo')
+  const correcao = resumo && r[resumo.id] !== T.estaCerto ? String(r[resumo.id] ?? '') : undefined
   const linhas = ([
-    ['Nome', contato.nome],
-    ['E-mail', contato.email],
-    ['Telefone', contato.telefone],
-    ...linhasResumo(C, r, ia).filter(([k]) => k !== problema?.resumo),
+    ...motivos.map((m) => [T.rever, m]),
+    [T.nome, contato.nome],
+    [T.email, contato.email],
+    [T.telefone, contato.telefone],
+    ...linhasResumo(C, r, ia).filter(([k]) => k !== (problema?.resumo ?? T.oQueQuer)),
     ...(extra && ia.pergunta ? [[ia.pergunta.pergunta, String(r[extra.id] ?? '')]] : []),
-    ['Mapa: problema', ia.mapa?.problema],
-    ['Mapa: objetivo', ia.mapa?.objetivo],
-    ['Mapa: primeiro passo', ia.mapa?.primeiroPasso],
-    ['Ajuste pedido ao mapa', ia.ajusteMapa],
-    ['Origem', envio.origem],
-    ['Tempo no formulário', envio.duracaoSeg ? `${Math.max(1, Math.round(envio.duracaoSeg / 60))} min` : undefined],
+    [T.resumoIA, ia.resumo],
+    [T.correcao, correcao],
+    [T.mapaProblema, ia.mapa?.problema],
+    [T.mapaObjetivo, ia.mapa?.objetivo],
+    [T.mapaPasso, ia.mapa?.primeiroPasso],
+    [T.mapaAjuste, ia.ajusteMapa],
+    [T.origem, envio.origem],
+    [T.tempo, envio.duracaoSeg ? `${Math.max(1, Math.round(envio.duracaoSeg / 60))} min` : undefined],
   ] as [string, string | undefined][]).filter((l): l is [string, string] => Boolean(l[1]))
   const textoProblema = problema ? String(r[problema.id] ?? '') : ''
 
-  const canais: Promise<void>[] = [email(assunto, linhas, textoProblema, contato.email, teste)]
+  const canais: Promise<void>[] = [email(assunto, linhas, problema?.resumo ?? T.oQueQuer, textoProblema, contato.email, teste)]
   // Pedidos de teste não vão para o Telegram nem para o CRM.
   if (!teste) canais.push(telegram(assunto, linhas, textoProblema), webhook(envio))
   await Promise.allSettled(canais)
@@ -104,7 +116,7 @@ async function avisar(envio: Envio, teste: boolean) {
 
 // E-mail pelo Resend. Sem RESEND_API_KEY ou AVISO_PARA, não envia.
 // Em teste, vai para AVISO_TESTE_PARA (se existir) em vez de AVISO_PARA.
-async function email(assunto: string, linhas: [string, string][], problema: string, responderA: string, teste: boolean) {
+async function email(assunto: string, linhas: [string, string][], tituloProblema: string, problema: string, responderA: string, teste: boolean) {
   const chave = process.env.RESEND_API_KEY
   const para = (teste && process.env.AVISO_TESTE_PARA) || process.env.AVISO_PARA
   if (!chave || !para) return
@@ -115,7 +127,7 @@ async function email(assunto: string, linhas: [string, string][], problema: stri
 <div style="max-width:600px;margin:0 auto">
 <h1 style="font-weight:500;font-size:22px;margin:0 0 16px">${escapar(assunto)}</h1>
 <table style="border-collapse:collapse;font-size:15px">${tabela}</table>
-${problema ? `<h2 style="font-weight:500;font-size:17px;margin:24px 0 8px">O que quer resolver</h2><p style="white-space:pre-wrap;line-height:1.6;margin:0">${escapar(problema)}</p>` : ''}
+${problema ? `<h2 style="font-weight:500;font-size:17px;margin:24px 0 8px">${escapar(tituloProblema)}</h2><p style="white-space:pre-wrap;line-height:1.6;margin:0">${escapar(problema)}</p>` : ''}
 </div></body></html>`
   try {
     const res = await fetch('https://api.resend.com/emails', {

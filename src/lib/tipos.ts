@@ -2,6 +2,8 @@
 // Quem adapta o formulário a um negócio mexe só no formulario.ts; aqui fica
 // o "contrato" que ele tem de cumprir.
 
+import type { Idioma } from './textos'
+
 export type Valor = string | string[]
 
 // As respostas, pelo id de cada passo. Guardamos sempre o texto que a pessoa
@@ -22,6 +24,7 @@ type Base = {
   // Nome da linha no painel "Resumo do seu caso" e no e-mail. Sem isto, a resposta não aparece no painel.
   resumo?: string
   // Pula o passo quando devolve true (ex. o país já veio da pesquisa da empresa).
+  // Também serve para ramos: perguntas só para empresas, só para casamentos, etc.
   pular?: (r: Respostas) => boolean
 }
 
@@ -72,6 +75,31 @@ export type Passo = Base &
         destaque?: (r: Respostas) => string | undefined
       }
     | {
+        // Uma data, com calendário. Guarda AAAA-MM-DD (ou o texto de `semData`).
+        tipo: 'data'
+        // Dias a partir de hoje: a data mais cedo e a mais tarde aceites. Padrão 0 e 730.
+        minDias?: number
+        maxDias?: number
+        // Botão para quem ainda não tem data (ex. "Ainda não sei"). true = texto padrão da língua.
+        semData?: string | true
+        // Endereço que responde se a data está livre: GET <url>?data=AAAA-MM-DD devolve {"livre": true|false}.
+        // Tem de aceitar pedidos deste site (CORS). Se falhar, a conversa segue sem dizer nada.
+        disponibilidade?: { url: string; livre: Texto; ocupada: Texto }
+      }
+    | {
+        // A IA escolhe do catálogo os itens que encaixam no que a pessoa contou, com o porquê.
+        // A pessoa tira ou põe e confirma. Sem IA, vira uma escolha de vários.
+        tipo: 'sugestao'
+        catalogo: { nome: string; descricao?: string }[]
+        // Quantos a IA pode sugerir (padrão 3).
+        maximo?: number
+      }
+    | {
+        // Uma frase da IA a resumir o pedido, com "Está certo" e "Corrigir".
+        // Sem IA, a frase é montada com as linhas do painel.
+        tipo: 'resumo'
+      }
+    | {
         // Uma pergunta criada pela IA a partir do que a pessoa já contou.
         // Some sozinha se a IA não responder a tempo.
         tipo: 'extra'
@@ -94,7 +122,22 @@ export type EixoRadar = {
   valor?: (r: Respostas) => number | undefined
 }
 
+// Quando uma combinação de respostas parece engano (ex. 300 convidados com 200 € de orçamento),
+// a conversa pergunta com educação se está certo. "Corrigir" volta à pergunta `corrigir`;
+// "Está certo" segue, e o pedido chega marcado para rever à mão.
+export type Coerencia = {
+  id: string
+  quando: (r: Respostas) => boolean
+  pergunta: Texto
+  // Id do passo a refazer se a pessoa quiser corrigir.
+  corrigir: string
+  // Rótulo do botão de corrigir (padrão: "Corrigir").
+  botao?: string
+}
+
 export type Config = {
+  // Língua dos textos fixos e da IA. As perguntas escreve-as você, já nesta língua.
+  idioma: Idioma
   marca: {
     nome: string
     // Frase curta ao lado do nome, no topo.
@@ -125,5 +168,6 @@ export type Config = {
     letrasNovas?: number
   }
   radar?: { titulo: string; eixos: EixoRadar[] }
+  coerencia?: Coerencia[]
   aviso: { assunto: (r: Respostas) => string }
 }
