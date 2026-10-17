@@ -40,3 +40,9 @@ test('o verificador apanha os erros mais comuns', () => {
   assert.ok(erros.some((e) => e.includes('último passo')))
   assert.ok(erros.some((e) => e.includes('naoexiste')))
 })
+
+test('db/schema.sql é o mesmo SQL que o site corre', async () => {
+  const { TABELA_SQL } = await import('../src/lib/banco')
+  const { readFileSync } = await import('node:fs')
+  assert.ok(readFileSync('db/schema.sql', 'utf8').includes(TABELA_SQL.trim()))
+})

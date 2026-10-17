@@ -1,6 +1,6 @@
 import type { Coerencia, Config, Passo, Respostas, Texto } from './tipos'
 import { DESCONHECIDO, NIVEL_VALOR, type IA } from './ia'
-import { TEXTOS } from './textos'
+import { textosDe } from './textos'
 
 // A lógica da conversa, sem React: que pergunta vem a seguir, o que vai no
 // painel, o desenho do radar, as regras de coerência e o resumo que a IA lê.
@@ -63,7 +63,7 @@ export function regraPendente(config: Config, r: Respostas): Coerencia | undefin
 // Porque este pedido merece um olhar humano antes de qualquer resposta automática.
 export function motivosParaRever(config: Config, r: Respostas, ia: IA): string[] {
   const motivos = (config.coerencia ?? []).filter((g) => r[OK_REGRA + g.id] === 'sim').map((g) => texto(g.pergunta, r))
-  if (ia.notas?.relacionado === false) motivos.push(TEXTOS[config.idioma].semRelacao)
+  if (ia.notas?.relacionado === false) motivos.push(textosDe(config).semRelacao)
   return motivos
 }
 
@@ -81,7 +81,7 @@ function valorLegivel(config: Config, p: Passo, v: string | string[]): string {
 
 // Linhas do painel "Resumo do seu caso".
 export function linhasResumo(config: Config, r: Respostas, ia: IA): [string, string][] {
-  const T = TEXTOS[config.idioma]
+  const T = textosDe(config)
   const l: [string, string][] = []
   for (const p of config.passos) {
     const v = r[p.id]
@@ -131,4 +131,32 @@ export function dadosParaIA(config: Config, r: Respostas, ia: IA): string {
   if (ia.empresaConfirmada && ia.empresa) linhas.push(`A empresa faz: ${ia.empresa.descricao}`)
   if (ia.ajusteMapa) linhas.push(`Pedido de ajuste ao mapa: ${ia.ajusteMapa.slice(0, 400)}`)
   return `<dados>\n${linhas.join('\n')}\n</dados>`
+}
+
+// Para contar o que falta e saber o que ainda vai ser perguntado, supõe-se que a IA vai preparar a pergunta
+// extra e o mapa (se não preparar, eles somem e o "faltam" só desce mais depressa).
+export function iaOtimista(ia: IA): IA {
+  return {
+    ...ia,
+    pergunta: ia.pergunta ?? { pergunta: '-', opcoes: [], palpite: '' },
+    mapa: ia.mapa ?? { problema: '', causas: [], objetivo: '', primeiroPasso: '', ajustes: [] },
+  }
+}
+
+// As etapas que ainda vêm depois de `atual`, só as do ramo das respostas atuais.
+export function etapasSeguintes(config: Config, atual: string | null, r: Respostas, ia: IA): string[] {
+  const out: string[] = []
+  const o = iaOtimista(ia)
+  for (let e = proxima(config, atual, r, o); e; e = proxima(config, e, r, o)) out.push(e)
+  return out
+}
+
+// As perguntas fixas que ainda vão ser feitas (a pergunta extra da IA não pode repetir nenhuma).
+export function perguntasFuturas(config: Config, atual: string | null, r: Respostas, ia: IA): string[] {
+  const contato = new Set([config.contato.nome, config.contato.email, config.contato.telefone])
+  return etapasSeguintes(config, atual, r, ia)
+    .map((e) => passoDe(config, e))
+    .filter((p): p is Passo => Boolean(p) && !contato.has(p!.id) && !['extra', 'mapa', 'resumo', 'sugestao'].includes(p!.tipo))
+    .map((p) => texto(p.pergunta, r))
+    .filter(Boolean)
 }

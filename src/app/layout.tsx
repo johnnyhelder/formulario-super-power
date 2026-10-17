@@ -20,8 +20,9 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR" data-tema={C.marca.tema} className={`${texto.variable} ${mono.variable}`}>
-      <body style={{ '--acao': C.marca.cor } as React.CSSProperties}>{children}</body>
+    <html lang={C.idioma} className={`${texto.variable} ${mono.variable}`}>
+      {/* fd-raiz no body: aqui a página é só o formulário. Num site que já existe, embrulhe <Conversa /> num div com estes atributos. */}
+      <body className="fd-raiz" data-tema={C.marca.tema} style={{ '--acao': C.marca.cor } as React.CSSProperties}>{children}</body>
     </html>
   )
 }

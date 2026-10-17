@@ -207,3 +207,84 @@ function fd_ia_valida(mixed $ia): ?array
     }
     return $ia;
 }
+
+// ── Claude ───────────────────────────────────────────────────────────────
+
+// Uma chamada ao Claude Haiku com saída estruturada (o esquema e o modelo vêm do config.json).
+// Conta para o teto diário do site inteiro. Devolve o objeto, ou null se falhar.
+function fd_claude(array $C, string $tipo, string $texto): ?array
+{
+    $chave = fd_segredo('ANTHROPIC_API_KEY');
+    if ($chave === '') {
+        return null;
+    }
+    // Teto diário para o site inteiro: é o que segura o pior caso da fatura.
+    $teto = (int) (fd_segredo('IA_TETO_DIARIO') ?: 1500);
+    if (fd_contar(fd_dados('uso') . '/' . date('Y-m-d') . '.json', 86400) > $teto) {
+        error_log('[formulario-super-power] teto diário de chamadas à IA atingido');
+        return null;
+    }
+    $cabecalhos = ['x-api-key: ' . $chave, 'anthropic-version: 2023-06-01', 'content-type: application/json'];
+    // Chaves que não estão presas a um workspace precisam de o indicar.
+    if (fd_segredo('ANTHROPIC_WORKSPACE_ID') !== '') {
+        $cabecalhos[] = 'anthropic-workspace-id: ' . fd_segredo('ANTHROPIC_WORKSPACE_ID');
+    }
+    $base = fd_segredo('ANTHROPIC_BASE_URL') ?: 'https://api.anthropic.com';
+    [$estado, $bruto] = fd_post($base . '/v1/messages', $cabecalhos, (string) json_encode([
+        'model' => $C['modelo'],
+        'max_tokens' => 700,
+        'thinking' => ['type' => 'disabled'],
+        'output_config' => ['effort' => 'low', 'format' => ['type' => 'json_schema', 'schema' => $C['esquemas'][$tipo]]],
+        'system' => $C['sistema'],
+        'messages' => [['role' => 'user', 'content' => $texto]],
+    ], JSON_UNESCAPED_UNICODE), 12);
+    if ($estado !== 200) {
+        error_log('[formulario-super-power] IA ' . $tipo . ' HTTP ' . $estado . ': ' . substr($bruto, 0, 300));
+        return null;
+    }
+    $saida = null;
+    foreach ((json_decode($bruto, true)['content'] ?? []) as $bloco) {
+        if (($bloco['type'] ?? '') === 'text') {
+            $saida = json_decode((string) $bloco['text'], true);
+            break;
+        }
+    }
+    // A saída estruturada garante o formato; confere-se na mesma que os campos pedidos vieram.
+    foreach ($C['esquemas'][$tipo]['required'] ?? [] as $campo) {
+        if (!is_array($saida) || !array_key_exists($campo, $saida)) {
+            error_log('[formulario-super-power] IA ' . $tipo . ': saída fora do esquema');
+            return null;
+        }
+    }
+    return $saida;
+}
+
+// O que a IA lê sobre a pessoa, igual ao dadosParaIA da versão Next.
+// Nunca leva nome, e-mail nem telefone.
+function dados_para_ia(array $C, array $r, array $ia): string
+{
+    $contato = array_filter([$C['contato']['nome'] ?? '', $C['contato']['email'] ?? '', $C['contato']['telefone'] ?? '']);
+    $linhas = [];
+    $extra = null;
+    foreach ($C['passos'] as $p) {
+        if ($p['tipo'] === 'extra') {
+            $extra = $p['id'];
+        }
+        $v = $r[$p['id']] ?? null;
+        if ($v === null || $v === '' || $v === [] || in_array($p['id'], $contato, true) || in_array($p['tipo'], ['extra', 'mapa', 'resumo'], true)) {
+            continue;
+        }
+        $linhas[] = ($p['resumo'] ?? $p['id']) . ': ' . (is_array($v) ? implode(', ', $v) : fd_cortar((string) $v, 1500));
+    }
+    if ($extra !== null && !empty($ia['pergunta']['pergunta']) && !empty($r[$extra])) {
+        $linhas[] = 'Pergunta extra: ' . $ia['pergunta']['pergunta'];
+        $linhas[] = 'Resposta extra: ' . fd_cortar((string) $r[$extra], 400);
+    }
+    if (!empty($ia['empresaConfirmada']) && !empty($ia['empresa']['descricao'])) {
+        $linhas[] = 'A empresa faz: ' . $ia['empresa']['descricao'];
+    }
+    if (!empty($ia['ajusteMapa'])) {
+        $linhas[] = 'Pedido de ajuste ao mapa: ' . fd_cortar((string) $ia['ajusteMapa'], 400);
+    }
+    return "<dados>\n" . implode("\n", $linhas) . "\n</dados>";
+}

@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { FORMULARIO } from '../../../../formulario'
+import { FORMULARIO } from '../../../../../formulario'
 import { rateLimitOrReject } from '@/lib/rate-limit'
 import { gravar } from '@/lib/banco'
-import { iaSchema, respostasSchema, type IA } from '@/lib/ia'
-import { montarAviso } from '@/lib/aviso'
+import { iaSchema, respostasSchema, type FichaIA, type IA } from '@/lib/ia'
+import { montarAviso, type Aviso } from '@/lib/aviso'
+import { perguntarClaude } from '@/lib/claude'
+import { chave as chaveDe } from '@/lib/env'
+import { dadosParaIA } from '@/lib/fluxo'
+import { instrucao } from '@/lib/prompts'
+import { textosDe } from '@/lib/textos'
 import { sessaoValida, turnstileLigado } from '@/lib/sessao'
 
 // Cada resposta grava a conversa (para medir onde as pessoas desistem).
@@ -76,27 +81,42 @@ const escapar = (s: unknown) =>
 
 // Cada canal falha sozinho: um Telegram em baixo não impede o e-mail.
 async function avisar(envio: Envio, teste: boolean) {
-  const a = montarAviso(FORMULARIO, { ...envio, ia: envio.ia as IA, contato: envio.contato! }, teste)
-  const canais: Promise<void>[] = [email(a.assunto, a.linhas, a.tituloProblema, a.problema, envio.contato!.email, teste)]
+  const C = FORMULARIO
+  const ia = envio.ia as IA
+  // A ficha do lead: mais uma chamada ao Haiku, só quando o pedido chega. Se falhar, o aviso sai sem ela.
+  let ficha: FichaIA | undefined
+  if (chaveDe('ANTHROPIC_API_KEY')) {
+    const res = await perguntarClaude('ficha', instrucao(C, 'ficha', dadosParaIA(C, envio.respostas, ia))).catch(() => null)
+    if (res?.ok) ficha = res.dados
+  }
+  const a = montarAviso(C, { ...envio, ia, contato: envio.contato! }, teste, ficha)
+  const canais: Promise<void>[] = [email(a, envio.contato!.email, teste)]
   // Pedidos de teste não vão para o Telegram nem para o CRM.
-  if (!teste) canais.push(telegram(a.assunto, a.linhas, a.problema), webhook(envio))
+  if (!teste) canais.push(telegram(a), webhook(envio, ficha, a))
   await Promise.allSettled(canais)
 }
 
 // E-mail pelo Resend. Sem RESEND_API_KEY ou AVISO_PARA, não envia.
 // Em teste, vai para AVISO_TESTE_PARA (se existir) em vez de AVISO_PARA.
-async function email(assunto: string, linhas: [string, string][], tituloProblema: string, problema: string, responderA: string, teste: boolean) {
+async function email(a: Aviso, responderA: string, teste: boolean) {
   const chave = process.env.RESEND_API_KEY
   const para = (teste && process.env.AVISO_TESTE_PARA) || process.env.AVISO_PARA
   if (!chave || !para) return
-  const tabela = linhas
+  const T = textosDe(FORMULARIO)
+  const tabela = a.linhas
     .map(([k, v]) => `<tr><td style="padding:6px 12px 6px 0;color:#6b6b75;white-space:nowrap;vertical-align:top">${escapar(k)}</td><td style="padding:6px 0">${escapar(v)}</td></tr>`)
     .join('')
+  const mensagem = a.mensagem
+    ? `<h2 style="font-weight:500;font-size:17px;margin:24px 0 8px">${escapar(T.mensagemPronta)}</h2>
+<p style="white-space:pre-wrap;line-height:1.6;margin:0;padding:14px 16px;background:#f1f5f2;border-radius:10px">${escapar(a.mensagem)}</p>
+${a.whatsapp ? `<p style="margin:14px 0 0"><a href="${escapar(a.whatsapp)}" style="display:inline-block;background:#25D366;color:#fff;text-decoration:none;padding:10px 18px;border-radius:8px;font-weight:600">${escapar(T.abrirWhatsapp)}</a></p>` : ''}`
+    : ''
   const html = `<!DOCTYPE html><html><body style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;padding:24px 16px;margin:0;color:#111">
 <div style="max-width:600px;margin:0 auto">
-<h1 style="font-weight:500;font-size:22px;margin:0 0 16px">${escapar(assunto)}</h1>
+<h1 style="font-weight:500;font-size:22px;margin:0 0 16px">${escapar(a.assunto)}</h1>
 <table style="border-collapse:collapse;font-size:15px">${tabela}</table>
-${problema ? `<h2 style="font-weight:500;font-size:17px;margin:24px 0 8px">${escapar(tituloProblema)}</h2><p style="white-space:pre-wrap;line-height:1.6;margin:0">${escapar(problema)}</p>` : ''}
+${mensagem}
+${a.problema ? `<h2 style="font-weight:500;font-size:17px;margin:24px 0 8px">${escapar(a.tituloProblema)}</h2><p style="white-space:pre-wrap;line-height:1.6;margin:0">${escapar(a.problema)}</p>` : ''}
 </div></body></html>`
   try {
     const res = await fetch('https://api.resend.com/emails', {
@@ -106,7 +126,7 @@ ${problema ? `<h2 style="font-weight:500;font-size:17px;margin:24px 0 8px">${esc
         from: process.env.AVISO_DE || 'Formulário <onboarding@resend.dev>',
         to: para.split(',').map((s) => s.trim()),
         reply_to: responderA,
-        subject: assunto,
+        subject: a.assunto,
         html,
       }),
       signal: AbortSignal.timeout(8000),
@@ -118,26 +138,32 @@ ${problema ? `<h2 style="font-weight:500;font-size:17px;margin:24px 0 8px">${esc
 }
 
 // Telegram (opcional): AVISO_TELEGRAM_TOKEN (do @BotFather) e AVISO_TELEGRAM_CHAT (o seu chat id).
-async function telegram(assunto: string, linhas: [string, string][], problema: string) {
+// Duas mensagens: o pedido com a ficha e, à parte, só a mensagem pronta para copiar e mandar.
+async function telegram(a: Aviso) {
   const token = process.env.AVISO_TELEGRAM_TOKEN
   const chat = process.env.AVISO_TELEGRAM_CHAT
   if (!token || !chat) return
-  const texto = [assunto, '', ...linhas.map(([k, v]) => `${k}: ${v}`), ...(problema ? ['', problema] : [])].join('\n').slice(0, 4000)
-  try {
-    const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ chat_id: chat, text: texto, disable_web_page_preview: true }),
-      signal: AbortSignal.timeout(8000),
-    })
-    if (!res.ok) console.error('[respostas] Telegram falhou:', res.status)
-  } catch (e) {
-    console.error('[respostas] Telegram falhou:', e)
+  const textos = [
+    [a.assunto, '', ...a.linhas.map(([k, v]) => `${k}: ${v}`), ...(a.problema ? ['', a.problema] : []), ...(a.whatsapp ? ['', a.whatsapp] : [])].join('\n'),
+    ...(a.mensagem ? [a.mensagem] : []),
+  ]
+  for (const texto of textos) {
+    try {
+      const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ chat_id: chat, text: texto.slice(0, 4000), disable_web_page_preview: true }),
+        signal: AbortSignal.timeout(8000),
+      })
+      if (!res.ok) console.error('[respostas] Telegram falhou:', res.status)
+    } catch (e) {
+      console.error('[respostas] Telegram falhou:', e)
+    }
   }
 }
 
-// Webhook (opcional): AVISO_WEBHOOK_URL recebe o pedido inteiro em JSON (n8n, Make, Zapier, CRM).
-async function webhook(envio: Envio) {
+// Webhook (opcional): AVISO_WEBHOOK_URL recebe o pedido inteiro em JSON, com a ficha (n8n, Make, Zapier, CRM).
+async function webhook(envio: Envio, ficha: FichaIA | undefined, a: Aviso) {
   const url = process.env.AVISO_WEBHOOK_URL
   if (!url) return
   const { site: _armadilha, ...dados } = envio
@@ -145,7 +171,7 @@ async function webhook(envio: Envio) {
     const res = await fetch(url, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(dados),
+      body: JSON.stringify({ ...dados, ficha: ficha ? { ...ficha, mensagem: a.mensagem, whatsapp: a.whatsapp } : undefined }),
       signal: AbortSignal.timeout(8000),
     })
     if (!res.ok) console.error('[respostas] webhook falhou:', res.status)

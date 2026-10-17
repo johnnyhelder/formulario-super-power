@@ -4,6 +4,7 @@ import { neon } from '@neondatabase/serverless'
 // Assim dá para ver onde as pessoas desistem (coluna passo) e não só quem
 // chegou ao fim. A tabela cria-se sozinha no primeiro acesso.
 // Sem DATABASE_URL, nada é gravado e só o e-mail do fim chega.
+// O mesmo SQL está em db/schema.sql (o teste garante que não divergem).
 
 export const TABELA_SQL = `
 create table if not exists form_respostas (
@@ -38,6 +39,8 @@ export function banco() {
   const url = process.env.DATABASE_URL
   if (!url) return null
   const sql = neon(url)
+  // FORMULARIO_CRIAR_TABELAS=0: o projeto cria as tabelas por conta própria (ex. Prisma, ver docs/SITE-EXISTENTE.md).
+  if (process.env.FORMULARIO_CRIAR_TABELAS === '0') pronta ??= Promise.resolve()
   pronta ??= (async () => {
     for (const comando of TABELA_SQL.split(';').map((c) => c.trim()).filter(Boolean)) {
       await sql.query(comando)

@@ -88,6 +88,13 @@ const ptBR = {
   correcao: 'Correção pedida',
   rever: 'Rever à mão',
   semRelacao: 'o texto parece não ter relação com o negócio',
+  // Ficha do lead (só para quem atende).
+  temperatura: 'Temperatura',
+  temperaturas: { quente: 'QUENTE', morno: 'MORNO', frio: 'FRIO' } as Record<'quente' | 'morno' | 'frio', string>,
+  abordagem: 'Como abordar',
+  proximoPasso: 'Próximo passo',
+  mensagemPronta: 'Mensagem pronta para o WhatsApp',
+  abrirWhatsapp: 'Abrir no WhatsApp com a mensagem',
 }
 
 export type Textos = typeof ptBR
@@ -198,6 +205,12 @@ const es: Textos = {
   correcao: 'Corrección pedida',
   rever: 'Revisar a mano',
   semRelacao: 'el texto no parece tener relación con el negocio',
+  temperatura: 'Temperatura',
+  temperaturas: { quente: 'CALIENTE', morno: 'TIBIO', frio: 'FRÍO' },
+  abordagem: 'Cómo abordarlo',
+  proximoPasso: 'Próximo paso',
+  mensagemPronta: 'Mensaje listo para WhatsApp',
+  abrirWhatsapp: 'Abrir en WhatsApp con el mensaje',
 }
 
 const en: Textos = {
@@ -282,6 +295,17 @@ const en: Textos = {
   correcao: 'Correction asked',
   rever: 'Review by hand',
   semRelacao: 'the text does not seem related to the business',
+  temperatura: 'Temperature',
+  temperaturas: { quente: 'HOT', morno: 'WARM', frio: 'COLD' },
+  abordagem: 'How to approach',
+  proximoPasso: 'Next step',
+  mensagemPronta: 'Ready-to-send WhatsApp message',
+  abrirWhatsapp: 'Open in WhatsApp with the message',
 }
 
 export const TEXTOS: Record<Idioma, Textos> = { 'pt-BR': ptBR, 'pt-PT': ptPT, es, en }
+
+// Os textos da língua do formulário, com as trocas do formulario.ts por cima.
+export function textosDe(C: { idioma: Idioma; textos?: Partial<Textos> }): Textos {
+  return { ...TEXTOS[C.idioma], ...(C.textos ?? {}) }
+}

@@ -91,6 +91,28 @@ function avisar(mixed $aviso, array $contato, bool $teste, array $linha): void
     $titulo = fd_cortar((string) ($aviso['tituloProblema'] ?? ''), 200);
     $problema = fd_cortar((string) ($aviso['problema'] ?? ''), 4000);
 
+    // A ficha do lead: mais uma chamada ao Haiku, só quando o pedido chega. Se falhar, o aviso sai sem ela.
+    // A IA escreve {nome}; o nome só entra aqui (a IA nunca recebe dados pessoais).
+    $C = fd_config();
+    $TF = $C['textosFicha'] ?? null;
+    $ficha = null;
+    $mensagem = '';
+    $whats = '';
+    if ($TF && !empty($C['instrucoes']['ficha']) && fd_segredo('ANTHROPIC_API_KEY') !== '') {
+        $ficha = fd_claude($C, 'ficha', str_replace('{{DADOS}}', dados_para_ia($C, $linha['respostas'], $linha['ia']), $C['instrucoes']['ficha']));
+    }
+    if ($ficha) {
+        $temp = $TF['temperaturas'][$ficha['temperatura']] ?? strtoupper((string) $ficha['temperatura']);
+        array_unshift($linhas, [$TF['temperatura'], $temp . ' · ' . $ficha['porque']], [$TF['abordagem'], (string) $ficha['abordagem']], [$TF['proximoPasso'], (string) $ficha['proximoPasso']]);
+        $assunto = '[' . $temp . '] ' . $assunto;
+        $primeiro = preg_split('/\s+/', trim($contato['nome']))[0] ?? '';
+        $mensagem = str_replace('{nome}', $primeiro, (string) $ficha['mensagem']);
+        $digitos = (string) preg_replace('/\D/', '', $contato['telefone']);
+        if (strlen($digitos) >= 8) {
+            $whats = 'https://wa.me/' . $digitos . '?text=' . rawurlencode($mensagem);
+        }
+    }
+
     // E-mail pelo Resend. Em teste, vai para AVISO_TESTE_PARA (se existir).
     $para = ($teste && fd_segredo('AVISO_TESTE_PARA')) ? fd_segredo('AVISO_TESTE_PARA') : fd_segredo('AVISO_PARA');
     if (fd_segredo('RESEND_API_KEY') !== '' && $para !== '') {
@@ -102,6 +124,8 @@ function avisar(mixed $aviso, array $contato, bool $teste, array $linha): void
         $html = '<!DOCTYPE html><html><body style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;padding:24px 16px;margin:0;color:#111">'
             . '<div style="max-width:600px;margin:0 auto"><h1 style="font-weight:500;font-size:22px;margin:0 0 16px">' . esc($assunto) . '</h1>'
             . '<table style="border-collapse:collapse;font-size:15px">' . $tabela . '</table>'
+            . ($mensagem !== '' ? '<h2 style="font-weight:500;font-size:17px;margin:24px 0 8px">' . esc($TF['mensagemPronta']) . '</h2><p style="white-space:pre-wrap;line-height:1.6;margin:0;padding:14px 16px;background:#f1f5f2;border-radius:10px">' . esc($mensagem) . '</p>'
+                . ($whats !== '' ? '<p style="margin:14px 0 0"><a href="' . esc($whats) . '" style="display:inline-block;background:#25D366;color:#fff;text-decoration:none;padding:10px 18px;border-radius:8px;font-weight:600">' . esc($TF['abrirWhatsapp']) . '</a></p>' : '') : '')
             . ($problema !== '' ? '<h2 style="font-weight:500;font-size:17px;margin:24px 0 8px">' . esc($titulo) . '</h2><p style="white-space:pre-wrap;line-height:1.6;margin:0">' . esc($problema) . '</p>' : '')
             . '</div></body></html>';
         [$estado] = fd_post('https://api.resend.com/emails', [
@@ -123,12 +147,19 @@ function avisar(mixed $aviso, array $contato, bool $teste, array $linha): void
         return;
     }
     if (fd_segredo('AVISO_TELEGRAM_TOKEN') !== '' && fd_segredo('AVISO_TELEGRAM_CHAT') !== '') {
-        $texto = $assunto . "\n\n" . implode("\n", array_map(fn($l) => $l[0] . ': ' . $l[1], $linhas)) . ($problema !== '' ? "\n\n" . $problema : '');
-        fd_post('https://api.telegram.org/bot' . fd_segredo('AVISO_TELEGRAM_TOKEN') . '/sendMessage', ['content-type: application/json'],
-            (string) json_encode(['chat_id' => fd_segredo('AVISO_TELEGRAM_CHAT'), 'text' => fd_cortar($texto, 4000), 'disable_web_page_preview' => true], JSON_UNESCAPED_UNICODE), 8);
+        // Duas mensagens: o pedido com a ficha e, à parte, só a mensagem pronta para copiar e mandar.
+        $textos = [$assunto . "\n\n" . implode("\n", array_map(fn($l) => $l[0] . ': ' . $l[1], $linhas)) . ($problema !== '' ? "\n\n" . $problema : '') . ($whats !== '' ? "\n\n" . $whats : '')];
+        if ($mensagem !== '') {
+            $textos[] = $mensagem;
+        }
+        foreach ($textos as $texto) {
+            fd_post('https://api.telegram.org/bot' . fd_segredo('AVISO_TELEGRAM_TOKEN') . '/sendMessage', ['content-type: application/json'],
+                (string) json_encode(['chat_id' => fd_segredo('AVISO_TELEGRAM_CHAT'), 'text' => fd_cortar($texto, 4000), 'disable_web_page_preview' => true], JSON_UNESCAPED_UNICODE), 8);
+        }
     }
     if (fd_segredo('AVISO_WEBHOOK_URL') !== '') {
         unset($linha['ip'], $linha['userAgent']);
-        fd_post(fd_segredo('AVISO_WEBHOOK_URL'), ['content-type: application/json'], (string) json_encode($linha + ['contato' => $contato], JSON_UNESCAPED_UNICODE), 8);
+        $comFicha = $ficha ? ['ficha' => array_merge($ficha, ['mensagem' => $mensagem, 'whatsapp' => $whats])] : [];
+        fd_post(fd_segredo('AVISO_WEBHOOK_URL'), ['content-type: application/json'], (string) json_encode($linha + ['contato' => $contato] + $comFicha, JSON_UNESCAPED_UNICODE), 8);
     }
 }

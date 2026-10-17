@@ -50,6 +50,17 @@ export type PerguntaIA = { pergunta: string; opcoes: string[]; palpite: string }
 
 export type SugestaoIA = { nome: string; motivo: string }
 
+// A ficha do lead, para quem vai atender (não aparece para quem responde).
+export const TEMPERATURAS = ['quente', 'morno', 'frio'] as const
+export type FichaIA = {
+  temperatura: (typeof TEMPERATURAS)[number]
+  porque: string
+  abordagem: string
+  proximoPasso: string
+  // Com {nome} no lugar do nome: a IA nunca recebe dados pessoais; o servidor troca depois.
+  mensagem: string
+}
+
 // Uma chamada só, depois do texto principal: a pergunta extra e as sugestões do catálogo.
 export type AprofundarIA = Partial<PerguntaIA> & { sugestoes?: SugestaoIA[] }
 
@@ -147,6 +158,7 @@ export function esquemasJSON(config: Config) {
         : {}),
     }),
     resumo: objeto({ frase: texto }),
+    ficha: objeto({ temperatura: enumDe(TEMPERATURAS), porque: texto, abordagem: texto, proximoPasso: texto, mensagem: texto }),
     mapa: objeto({
       problema: texto,
       causas: { type: 'array', items: objeto({ texto, ligacao: texto }) },
@@ -198,6 +210,13 @@ export function esquemasZod(config: Config) {
         .optional(),
     }),
     resumo: z.object({ frase: z.string().max(300) }),
+    ficha: z.object({
+      temperatura: z.enum(TEMPERATURAS),
+      porque: z.string().max(240),
+      abordagem: z.string().max(300),
+      proximoPasso: z.string().max(160),
+      mensagem: z.string().max(700),
+    }),
     mapa: z.object({
       problema: z.string().max(70),
       causas: z.array(z.object({ texto: z.string().max(60), ligacao: z.string().max(30) })).max(3),

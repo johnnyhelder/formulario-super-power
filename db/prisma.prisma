@@ -1,0 +1,32 @@
+// Formulário Super Power: os models para quem usa Prisma (copie para o seu schema.prisma).
+// Com eles no schema, `prisma db push` e as migrações conhecem as tabelas e não tentam apagá-las.
+// Ponha também FORMULARIO_CRIAR_TABELAS=0 no ambiente, para quem cria as tabelas ser só o Prisma.
+
+model FormResposta {
+  sessao       String   @id @db.Uuid
+  passo        Int      @default(0)
+  concluido    Boolean  @default(false)
+  suspeito     Boolean  @default(false)
+  respostas    Json     @default("{}")
+  ia           Json     @default("{}")
+  nome         String?
+  email        String?
+  telefone     String?
+  origem       String?
+  duracaoSeg   Int?     @map("duracao_seg")
+  ip           String?
+  userAgent    String?  @map("user_agent")
+  teste        Boolean  @default(false)
+  criadoEm     DateTime @default(now()) @map("criado_em") @db.Timestamptz
+  atualizadoEm DateTime @default(now()) @map("atualizado_em") @db.Timestamptz
+
+  @@index([criadoEm(sort: Desc)], map: "form_respostas_criado")
+  @@map("form_respostas")
+}
+
+model FormIaUso {
+  dia      DateTime @id @db.Date
+  chamadas Int      @default(0)
+
+  @@map("form_ia_uso")
+}

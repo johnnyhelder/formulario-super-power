@@ -6,10 +6,10 @@ import { FORMULARIO as C } from '../../formulario'
 import type { Coerencia, Passo, Respostas, Valor } from '@/lib/tipos'
 import { DESCONHECIDO, passoEmpresa, passoSugestao, type AprofundarIA, type EmpresaIA, type IA, type MapaIA, type NotasIA } from '@/lib/ia'
 import {
-  CONFIRMAR, LIVRE, OK_REGRA, dataLegivel, etapas, fraseResumo, linhasResumo, opcoesDe, passoDe, proxima, radarValores,
-  regraPendente, texto as textoDe,
+  CONFIRMAR, LIVRE, OK_REGRA, dataLegivel, etapas, etapasSeguintes, fraseResumo, iaOtimista, linhasResumo, opcoesDe, passoDe, perguntasFuturas,
+  proxima, radarValores, regraPendente, texto as textoDe,
 } from '@/lib/fluxo'
-import { TEXTOS } from '@/lib/textos'
+import { textosDe } from '@/lib/textos'
 import { montarAviso } from '@/lib/aviso'
 import { Bolha, CartaoCenario, CartaoEmpresa, CartaoEscala, CartaoMapa, Digitando, Radar, Resumo } from './pecas'
 
@@ -47,7 +47,7 @@ type SemId<T> = T extends unknown ? Omit<T, 'id'> : never
 // O estado da conversa antes de cada resposta, para o botão Voltar.
 type Foto = { itens: Item[]; etapa: string | null; r: Respostas; ia: IA; feitas: number; marcadas: string[] }
 
-const T = TEXTOS[C.idioma]
+const T = textosDe(C)
 const ETAPAS = etapas(C)
 const EMPRESA = passoEmpresa(C)
 const SUGESTAO = passoSugestao(C)
@@ -60,7 +60,7 @@ const TURNSTILE = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY
 // Versão PHP (npm run exportar): a página é estática e fala com api/*.php na mesma pasta.
 const PHP = process.env.NEXT_PUBLIC_FD_PHP === '1'
 const rota = (nome: 'ia' | 'respostas' | 'sessao') =>
-  PHP ? `${process.env.NEXT_PUBLIC_FD_CAMINHO ?? ''}/api/${nome}.php` : `/api/${nome}`
+  PHP ? `${process.env.NEXT_PUBLIC_FD_CAMINHO ?? ''}/api/${nome}.php` : `/api/formulario/${nome}`
 
 const espera = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
@@ -86,11 +86,6 @@ function hojeMais(dias: number): string {
   return d.toISOString().slice(0, 10)
 }
 
-// Para saber se a etapa seguinte "seria" a pergunta extra ou o mapa, se a IA já os tivesse.
-const IA_CHEIA: IA = {
-  pergunta: { pergunta: '-', opcoes: [], palpite: '' },
-  mapa: { problema: '', causas: [], objetivo: '', primeiroPasso: '', ajustes: [] },
-}
 
 export function Conversa() {
   const [itens, setItens] = useState<Item[]>([])
@@ -130,6 +125,8 @@ export function Conversa() {
   const sessaoIA = useRef<Promise<string>>(Promise.resolve(''))
   // A etapa a partir da qual a conversa retoma depois de uma regra de coerência.
   const retomar = useRef<string | null>(null)
+  // A última etapa respondida (para contar o que falta enquanto o bot escreve).
+  const ultima = useRef<string | null>(null)
   const ultimaNota = useRef('')
   const comecou = useRef(false)
 
@@ -303,7 +300,7 @@ export function Conversa() {
 
   const avancar = async (de: string) => {
     // A pergunta extra, as sugestões, o mapa e o resumo preparam-se aqui, se forem os próximos.
-    const candidata = proxima(C, de, rRef.current, { ...iaRef.current, ...IA_CHEIA })
+    const candidata = proxima(C, de, rRef.current, iaOtimista(iaRef.current))
     const tipo = candidata ? passoDe(C, candidata)?.tipo : undefined
     if ((tipo === 'extra' || tipo === 'sugestao') && promessaAprofundar.current) {
       await Promise.race([promessaAprofundar.current, espera(5000)])
@@ -346,7 +343,7 @@ export function Conversa() {
       setEtapa(COERENCIA + regra.id)
       return
     }
-    if (de === ULTIMA || !proxima(C, de, rRef.current, { ...iaRef.current, ...IA_CHEIA })) {
+    if (de === ULTIMA || !proxima(C, de, rRef.current, iaOtimista(iaRef.current))) {
       await concluir()
       return
     }
@@ -400,6 +397,7 @@ export function Conversa() {
     ultimaNota.current = ''
     promessaAprofundar.current = undefined
     retomar.current = null
+    ultima.current = null
     try { sessionStorage.removeItem(CHAVE_SESSAO) } catch {}
     sessao.current = novaSessao()
     inicio.current = Date.now()
@@ -427,6 +425,7 @@ export function Conversa() {
   const responderEtapa = async (mostrar: string, valor: Valor | boolean) => {
     const de = etapa!
     const p = passoDe(C, de)
+    ultima.current = de
     limparEntradas()
     empurrar({ tipo: 'eu', texto: mostrar })
     if (p && typeof valor !== 'boolean') atualizarR({ [p.id]: valor })
@@ -467,7 +466,8 @@ export function Conversa() {
       }
       // A pergunta extra e as sugestões preparam-se já, numa chamada só, enquanto a pessoa responde ao resto.
       if (SUGESTAO || C.passos.some((x) => x.tipo === 'extra')) {
-        promessaAprofundar.current = pedirIA<AprofundarIA>({ tipo: 'aprofundar', respostas: limpas(rRef.current), ia: iaRef.current }).then((d) => {
+        const futuras = perguntasFuturas(C, p.id, rRef.current, iaRef.current).slice(0, 15)
+        promessaAprofundar.current = pedirIA<AprofundarIA>({ tipo: 'aprofundar', respostas: limpas(rRef.current), ia: iaRef.current, futuras }).then((d) => {
           if (d?.pergunta && d.opcoes?.length) atualizarIa({ pergunta: { pergunta: d.pergunta, opcoes: d.opcoes, palpite: d.palpite ?? '' } })
           if (d?.sugestoes?.length) atualizarIa({ sugestoes: d.sugestoes })
         })
@@ -512,7 +512,7 @@ export function Conversa() {
       if (certo) {
         atualizarR({ [OK_REGRA + regra.id]: 'sim' })
         const de = retomar.current!
-        if (de === ULTIMA || !proxima(C, de, rRef.current, { ...iaRef.current, ...IA_CHEIA })) await concluir()
+        if (de === ULTIMA || !proxima(C, de, rRef.current, iaOtimista(iaRef.current))) await concluir()
         else await avancar(de)
         return
       }
@@ -564,7 +564,8 @@ export function Conversa() {
         }),
       })
       if (!res.ok) throw new Error()
-      window.fbq?.('track', 'Lead')
+      // Nos testes (?teste=1) o Pixel não conta Lead, senão estraga a otimização dos anúncios.
+      if (!teste.current) window.fbq?.('track', 'Lead')
       try { sessionStorage.removeItem(CHAVE_SESSAO) } catch {}
       await espera(500)
       setDigitando(false)
@@ -635,9 +636,12 @@ export function Conversa() {
   const linhas = useMemo(() => linhasResumo(C, r, ia), [r, ia])
   const radar = useMemo(() => radarValores(C, r, ia), [r, ia])
 
-  const total = ETAPAS.length
-  const progresso = Math.round((feitas / total) * 100)
-  const faltam = Math.max(0, total - feitas)
+  // O que falta conta só o ramo das respostas atuais (num formulário com ramos, as perguntas dos outros não entram).
+  const respondidas = C.passos.filter((p) => r[p.id] !== undefined).length
+  const base = etapa?.startsWith(COERENCIA) ? retomar.current : (etapa ?? ultima.current)
+  const aberta = etapa && !etapa.startsWith(COERENCIA) ? 1 : 0
+  const faltam = feitas === 0 && !etapa ? ETAPAS.length : aberta + etapasSeguintes(C, base, r, ia).length
+  const progresso = Math.round((respondidas / Math.max(1, respondidas + faltam)) * 100)
 
   // ── Entradas da etapa atual ────────────────────────────────────────────
   const chips = (opcoes: string[], destaque?: string[]) => (
@@ -715,14 +719,14 @@ export function Conversa() {
       case 'texto':
         return (
           <>
-            {campoTexto(p.marcador, 'text', { autoComplete: p.autoComplete })}
+            {campoTexto(textoDe(p.marcador, r), 'text', { autoComplete: p.autoComplete })}
             {p.atalhos?.length ? chips(p.atalhos) : null}
           </>
         )
       case 'empresa':
         return (
           <>
-            {campoTexto(p.marcador, 'text', { autoComplete: 'organization' })}
+            {campoTexto(textoDe(p.marcador, r), 'text', { autoComplete: 'organization' })}
             {p.semEmpresa && (
               <div className="fd-chips">
                 <button type="button" className="fd-chip" onClick={() => responder(p.semEmpresa!, '')}>{p.semEmpresa}</button>
@@ -734,7 +738,7 @@ export function Conversa() {
         const sugeridos = p.id === EMPRESA?.passoSegmento ? ia.empresa?.segmentos : undefined
         return (
           <>
-            {p.escrever && campoTexto(p.escrever)}
+            {p.escrever && campoTexto(textoDe(p.escrever, r))}
             {chips(opcoesDe(p, r), sugeridos)}
           </>
         )
@@ -801,7 +805,7 @@ export function Conversa() {
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviarTexto() }
                 }}
-                placeholder={p.marcador}
+                placeholder={textoDe(p.marcador, r)}
               />
               <button type="submit" aria-label={T.enviar} disabled={!texto.trim()}>
                 <ArrowUp size={18} />
@@ -850,7 +854,7 @@ export function Conversa() {
       case 'email':
         return (
           <>
-            {campoTexto(p.marcador, 'email', { autoComplete: 'email' })}
+            {campoTexto(textoDe(p.marcador, r), 'email', { autoComplete: 'email' })}
             {p.id === ULTIMA && privacidade}
           </>
         )

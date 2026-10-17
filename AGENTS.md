@@ -30,8 +30,9 @@ Mapa do código:
 | `src/lib/fluxo.ts` | Que pergunta vem a seguir, painel, radar, o que a IA lê. Funções puras, testadas. |
 | `src/lib/validar.ts` | Confere se o `formulario.ts` está coerente. |
 | `src/lib/ia.ts` | Formatos das respostas da IA (JSON Schema + zod). |
-| `src/app/conversa.tsx` | O chat. `src/app/pecas.tsx`: os cartões. `src/app/globals.css`: o visual. |
-| `src/app/api/ia/route.ts` | Chamadas à IA e à pesquisa. `src/app/api/respostas/route.ts`: grava e avisa por e-mail. |
+| `src/app/conversa.tsx` | O chat. `src/app/pecas.tsx`: os cartões. `src/app/formulario.css`: o visual, todo dentro de `.fd-raiz` e com cores em tokens. |
+| `src/app/api/formulario/ia/route.ts` | Chamadas à IA e à pesquisa. `src/app/api/formulario/respostas/route.ts`: grava, prepara a ficha do lead e avisa. |
+| `src/lib/claude.ts` | A chamada ao Claude (saída estruturada, teto diário), usada pelas duas rotas. |
 | `src/lib/banco.ts` | A tabela `form_respostas` (cria-se sozinha). |
 | `src/lib/prompts.ts` | Os textos que vão à IA (usados pela rota e, via `npm run exportar`, pela versão PHP). |
 | `php/api/` e `scripts/exportar.ts` | A versão PHP: a mesma página, estática, com três endereços PHP. Guia em `docs/PHP.md`. Mudou a lógica da IA ou do aviso? Mude nas duas (`src/app/api/` e `php/api/`). |
@@ -55,7 +56,7 @@ Comece com um diagnóstico curto, em **uma** mensagem:
 1. Para que negócio é o formulário? O que ele vende, para quem, em que país e em que língua (pt-BR, pt-PT, es, en)?
 2. O que quer saber de quem responde para decidir se é um bom cliente? (porte, orçamento, urgência, região...)
 3. Para onde vão os leads: e-mail, banco, os dois?
-4. O formulário vai ser um site à parte (ex. `diagnostico.seudominio.com`), uma página dentro de um site Next.js que já existe, ou vai morar num alojamento PHP (cPanel, WordPress, servidor próprio sem Node)? No último caso, siga `docs/PHP.md` (`npm run exportar`).
+4. O formulário vai ser um site à parte (ex. `diagnostico.seudominio.com`), uma página dentro de um site Next.js que já existe (siga `docs/SITE-EXISTENTE.md`), ou vai morar num alojamento PHP (cPanel, WordPress, servidor próprio sem Node)? No último caso, siga `docs/PHP.md` (`npm run exportar`).
 
 Depois, siga as etapas e marque o progresso ("etapa 2 de 6").
 

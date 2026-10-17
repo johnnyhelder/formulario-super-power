@@ -2,7 +2,7 @@
 // Quem adapta o formulário a um negócio mexe só no formulario.ts; aqui fica
 // o "contrato" que ele tem de cumprir.
 
-import type { Idioma } from './textos'
+import type { Idioma, Textos } from './textos'
 
 export type Valor = string | string[]
 
@@ -33,7 +33,7 @@ export type Passo = Base &
     | {
         // Uma linha de texto livre.
         tipo: 'texto'
-        marcador: string
+        marcador: Texto
         minimo?: number
         autoComplete?: string
         // Botões de atalho por baixo do campo (ex. "Ainda não tenho empresa").
@@ -43,7 +43,7 @@ export type Passo = Base &
         // Escolher uma opção. Com `escrever`, a pessoa também pode escrever a sua.
         tipo: 'escolha'
         opcoes: string[] | ((r: Respostas) => string[])
-        escrever?: string
+        escrever?: Texto
       }
     | {
         // Marcar várias opções e tocar em "Pronto".
@@ -53,7 +53,7 @@ export type Passo = Base &
     | {
         // O nome da empresa. A IA pesquisa na internet e mostra o cartão "É esta a sua empresa?".
         tipo: 'empresa'
-        marcador: string
+        marcador: Texto
         // Botão para quem ainda não tem empresa (a resposta fica vazia).
         semEmpresa?: string
         // Id do passo de país e do passo de segmento (do tipo 'escolha').
@@ -65,7 +65,7 @@ export type Passo = Base &
         // O texto principal: o que a pessoa quer resolver. A IA anota enquanto ela escreve
         // e desenha o cartão do cenário quando ela envia.
         tipo: 'problema'
-        marcador: string
+        marcador: Texto
       }
     | {
         // Tamanho da equipe, com o desenho da empresa em bonequinhos.
@@ -108,7 +108,7 @@ export type Passo = Base &
         // O mapa do caso (fluxograma). A pessoa confirma ou pede um ajuste.
         tipo: 'mapa'
       }
-    | { tipo: 'email'; marcador: string }
+    | { tipo: 'email'; marcador: Texto }
     | { tipo: 'telefone'; marcador: Texto }
   )
 
@@ -138,6 +138,8 @@ export type Coerencia = {
 export type Config = {
   // Língua dos textos fixos e da IA. As perguntas escreve-as você, já nesta língua.
   idioma: Idioma
+  // Troca textos fixos da conversa (ex. { resumoTitulo: 'Resumo do seu pedido' }). Ver src/lib/textos.ts.
+  textos?: Partial<Textos>
   marca: {
     nome: string
     // Frase curta ao lado do nome, no topo.

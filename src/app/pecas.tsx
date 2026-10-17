@@ -7,7 +7,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { DESCONHECIDO, type EmpresaIA, type MapaIA, type NotasIA } from '@/lib/ia'
-import { TEXTOS } from '@/lib/textos'
+import { textosDe } from '@/lib/textos'
 import { FORMULARIO } from '../../formulario'
 
 // Os cartões que aparecem no meio da conversa e o painel lateral.
@@ -20,7 +20,7 @@ const ICONES: Record<string, LucideIcon> = {
   alvo: Target, alerta: TriangleAlert,
 }
 
-const T = TEXTOS[FORMULARIO.idioma]
+const T = textosDe(FORMULARIO)
 
 function semMovimento(): boolean {
   return typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -115,7 +115,15 @@ function PixelEmpresa({ bonecos }: { bonecos: number }) {
       h: andares * alturaAndar + 8,
     }))
 
-    const cores = ['#B7A6F5', '#F59E0B', '#5EC8B8', '#EDEDF0']
+    // As cores vêm dos tokens do CSS (.fd-raiz), para a marca mudar o desenho também.
+    const css = getComputedStyle(canvas)
+    const tk = (n: string, d: string) => css.getPropertyValue(n).trim() || d
+    const K = {
+      fundo: tk('--cena-fundo', '#0B0C14'), chao: tk('--cena-chao', '#1A1C2C'), predio: tk('--cena-predio', '#1E2140'),
+      andar: tk('--cena-andar', '#2B2F5A'), telhado: tk('--cena-telhado', '#7B74C9'), lua: tk('--cena-lua', '#F3E9C6'),
+      estrela: tk('--cena-estrela', '237, 237, 240'), tinta: tk('--tinta', '#EDEDF0'), fraca: tk('--tinta-fraca', '#92929C'),
+    }
+    const cores = [tk('--cor-a', '#B7A6F5'), tk('--acao', '#F59E0B'), tk('--cor-c', '#5FD39A'), K.tinta]
     let semente = bonecos * 9301 + 49297
     const acaso = () => ((semente = (semente * 9301 + 49297) % 233280) / 233280)
     const lista: (Boneco & { predio: number })[] = Array.from({ length: bonecos }, () => {
@@ -134,26 +142,26 @@ function PixelEmpresa({ bonecos }: { bonecos: number }) {
     let pedido = 0
     const desenhar = () => {
       quadro++
-      ctx.fillStyle = '#0B0C14'
+      ctx.fillStyle = K.fundo
       ctx.fillRect(0, 0, W, H)
       for (const e of estrelas) {
         const brilho = 0.35 + 0.35 * Math.sin(quadro / 30 + e.f)
-        ctx.fillStyle = `rgba(237,237,240,${brilho})`
+        ctx.fillStyle = `rgba(${K.estrela},${brilho})`
         ctx.fillRect(Math.round(e.x), Math.round(e.y), 2, 2)
       }
-      ctx.fillStyle = '#F3E9C6'
+      ctx.fillStyle = K.lua
       ctx.fillRect(W - 30, 12, 8, 8)
-      ctx.fillStyle = '#1A1C2C'
+      ctx.fillStyle = K.chao
       ctx.fillRect(0, chao, W, H - chao)
       for (const c of caixas) {
-        ctx.fillStyle = '#1E2140'
+        ctx.fillStyle = K.predio
         ctx.fillRect(c.x, c.y, c.w, c.h)
-        ctx.fillStyle = '#2B2F5A'
+        ctx.fillStyle = K.andar
         for (let a = 0; a < andares; a++) {
           const y = chao - (a + 1) * alturaAndar
           ctx.fillRect(c.x + 4, y + 2, c.w - 8, alturaAndar - 4)
         }
-        ctx.fillStyle = '#7B74C9'
+        ctx.fillStyle = K.telhado
         ctx.fillRect(c.x + c.w / 2 - 14, c.y - 6, 28, 6)
       }
       for (const b of lista) {
@@ -162,12 +170,12 @@ function PixelEmpresa({ bonecos }: { bonecos: number }) {
         if (b.x < 6 || b.x > c.w - 12) b.v *= -1
         const px = Math.round(c.x + b.x)
         const py = chao - b.andar * alturaAndar - 13
-        ctx.fillStyle = '#EDEDF0'
+        ctx.fillStyle = K.tinta
         ctx.fillRect(px + 1, py, 2, 2)
         ctx.fillStyle = b.cor
         ctx.fillRect(px, py + 3, 4, 5)
         const passo = Math.floor(quadro / 8 + b.x) % 2
-        ctx.fillStyle = '#92929C'
+        ctx.fillStyle = K.fraca
         ctx.fillRect(px + (passo ? 0 : 1), py + 8, 1, 2)
         ctx.fillRect(px + (passo ? 3 : 2), py + 8, 1, 2)
       }

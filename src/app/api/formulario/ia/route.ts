@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { FORMULARIO } from '../../../../formulario'
+import { FORMULARIO } from '../../../../../formulario'
 import { rateLimitOrReject } from '@/lib/rate-limit'
-import { contarChamadaIA } from '@/lib/banco'
 import { sessaoValida, turnstileLigado } from '@/lib/sessao'
 import { chave as chaveDe } from '@/lib/env'
 import { dadosParaIA } from '@/lib/fluxo'
-import { MODELO, esquemasJSON, esquemasZod, iaSchema, respostasSchema, type IA } from '@/lib/ia'
-import { instrucao, instrucaoEmpresa, sistema } from '@/lib/prompts'
+import { iaSchema, respostasSchema, type EmpresaIA, type IA } from '@/lib/ia'
+import { instrucao, instrucaoEmpresa } from '@/lib/prompts'
+import { perguntarClaude } from '@/lib/claude'
 
 // As peças de IA da conversa, com Claude Haiku e saída estruturada (JSON
 // Schema): a resposta é sempre um objeto com campos fechados, nunca texto
@@ -16,24 +16,18 @@ import { instrucao, instrucaoEmpresa, sistema } from '@/lib/prompts'
 // A empresa é pesquisada na internet (Firecrawl, ~2 créditos por pesquisa).
 // Sem FIRECRAWL_API_KEY, a IA não pesquisa e o cartão da empresa não aparece.
 // Dois travões no gasto: limite por IP (em memória, por instância) e um teto
-// diário de chamadas guardado no banco, que vale para o site inteiro.
+// diário de chamadas guardado no banco, que vale para o site inteiro (src/lib/claude.ts).
 
 const C = FORMULARIO
-const TETO_DIARIO = Number(process.env.IA_TETO_DIARIO) || 1500
 
 const pedidoSchema = z.discriminatedUnion('tipo', [
   z.object({ tipo: z.literal('empresa'), empresa: z.string().trim().min(2).max(120) }),
   z.object({ tipo: z.literal('notas'), respostas: respostasSchema, ia: iaSchema }),
-  z.object({ tipo: z.literal('aprofundar'), respostas: respostasSchema, ia: iaSchema }),
+  z.object({ tipo: z.literal('aprofundar'), respostas: respostasSchema, ia: iaSchema, futuras: z.array(z.string().max(200)).max(15).optional() }),
   z.object({ tipo: z.literal('mapa'), respostas: respostasSchema, ia: iaSchema }),
   z.object({ tipo: z.literal('resumo'), respostas: respostasSchema, ia: iaSchema }),
 ])
 type Pedido = z.infer<typeof pedidoSchema>
-
-const SISTEMA = sistema(C)
-
-const JSONS = esquemasJSON(C)
-const ZODS = esquemasZod(C)
 
 type Resultado = { title?: string; url?: string; description?: string }
 
@@ -63,7 +57,8 @@ function textoPedido(pedido: Pedido, resultados: Resultado[]): string {
       .join('\n\n')
     return instrucaoEmpresa(pedido.empresa, lista)
   }
-  return instrucao(C, pedido.tipo, dadosParaIA(C, pedido.respostas, pedido.ia as IA))
+  const futuras = pedido.tipo === 'aprofundar' ? (pedido.futuras ?? []).map((f) => `- ${f.replace(/\s+/g, ' ')}`).join('\n') : ''
+  return instrucao(C, pedido.tipo, dadosParaIA(C, pedido.respostas, pedido.ia as IA), futuras)
 }
 
 export async function POST(request: NextRequest) {
@@ -79,54 +74,19 @@ export async function POST(request: NextRequest) {
   if (!parsed.success) return NextResponse.json({ ok: false }, { status: 400 })
   const pedido = parsed.data
 
-  const chave = chaveDe('ANTHROPIC_API_KEY')
-  if (!chave) return NextResponse.json({ ok: false }, { status: 503 })
+  if (!chaveDe('ANTHROPIC_API_KEY')) return NextResponse.json({ ok: false }, { status: 503 })
 
   try {
-    // O teto diário só existe com banco. Sem ele, fica só o limite por IP.
-    const hoje = await contarChamadaIA()
-    if (hoje !== null && hoje > TETO_DIARIO) {
-      console.error('[ia] teto diário atingido', hoje)
-      return NextResponse.json({ ok: false }, { status: 429 })
-    }
     const resultados = pedido.tipo === 'empresa' ? await pesquisar(pedido.empresa) : []
     // Sem resultados não há o que ler: o Haiku só adivinharia.
     if (pedido.tipo === 'empresa' && resultados.length === 0) {
       return NextResponse.json({ ok: false }, { status: 404 })
     }
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'x-api-key': chave,
-        'anthropic-version': '2023-06-01',
-        'content-type': 'application/json',
-        // Chaves que não estão presas a um workspace precisam de o indicar.
-        ...(chaveDe('ANTHROPIC_WORKSPACE_ID') ? { 'anthropic-workspace-id': chaveDe('ANTHROPIC_WORKSPACE_ID') } : {}),
-      },
-      body: JSON.stringify({
-        model: MODELO,
-        max_tokens: 700,
-        thinking: { type: 'disabled' },
-        output_config: { effort: 'low', format: { type: 'json_schema', schema: JSONS[pedido.tipo] } },
-        system: SISTEMA,
-        messages: [{ role: 'user', content: textoPedido(pedido, resultados) }],
-      }),
-      signal: AbortSignal.timeout(12_000),
-    })
-    if (!res.ok) {
-      console.error('[ia]', pedido.tipo, res.status, (await res.text()).slice(0, 300))
-      return NextResponse.json({ ok: false }, { status: 502 })
-    }
-    const corpo = await res.json()
-    const bloco = (corpo.content as { type: string; text?: string }[]).find((b) => b.type === 'text')
-    const valido = ZODS[pedido.tipo].safeParse(JSON.parse(bloco?.text ?? 'null'))
-    if (!valido.success) {
-      console.error('[ia] saída fora do esquema', pedido.tipo, valido.error.message.slice(0, 300))
-      return NextResponse.json({ ok: false }, { status: 502 })
-    }
-    let dados: unknown = valido.data
+    const valido = await perguntarClaude(pedido.tipo, textoPedido(pedido, resultados))
+    if (!valido.ok) return NextResponse.json({ ok: false }, { status: valido.estado })
+    let dados: unknown = valido.dados
     if (pedido.tipo === 'empresa') {
-      const e = valido.data as z.infer<typeof ZODS.empresa>
+      const e = valido.dados as EmpresaIA
       // O site só passa se o domínio estiver mesmo num dos resultados.
       const dominio = (url: string) => {
         try { return new URL(url.startsWith('http') ? url : `https://${url}`).hostname.replace(/^www\./, '') } catch { return '' }

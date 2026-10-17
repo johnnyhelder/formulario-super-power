@@ -1,7 +1,9 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { FORMULARIO as C } from '../formulario'
-import { CONFIRMAR, OK_REGRA, dadosParaIA, dataLegivel, linhasResumo, motivosParaRever, proxima, radarValores, regraPendente } from '../src/lib/fluxo'
+import { CONFIRMAR, OK_REGRA, dadosParaIA, dataLegivel, etapasSeguintes, linhasResumo, motivosParaRever, perguntasFuturas, proxima, radarValores, regraPendente } from '../src/lib/fluxo'
+import { textosDe } from '../src/lib/textos'
+import { linkWhatsapp, mensagemComNome } from '../src/lib/aviso'
 import { FORMULARIO as EVENTOS } from '../exemplos/eventos'
 import type { EmpresaIA } from '../src/lib/ia'
 
@@ -78,4 +80,30 @@ test('datas aparecem por extenso na língua do formulário', () => {
 test('no exemplo de eventos, a empresa só é perguntada em evento de empresa', () => {
   assert.equal(proxima(EVENTOS, 'evento', { nome: 'Rita', evento: 'Casamento' }, {}), 'data')
   assert.equal(proxima(EVENTOS, 'evento', { nome: 'Rita', evento: 'Evento de empresa' }, {}), 'empresa')
+})
+
+test('o que falta conta só o ramo das respostas (num casamento, a pergunta da empresa não entra)', () => {
+  const casamento = etapasSeguintes(EVENTOS, 'evento', { nome: 'Rita', evento: 'Casamento' }, {})
+  const empresa = etapasSeguintes(EVENTOS, 'evento', { nome: 'Rita', evento: 'Evento de empresa' }, {})
+  assert.ok(!casamento.includes('empresa') && empresa.includes('empresa'))
+  assert.equal(empresa.length, casamento.length + 1)
+})
+
+test('a pergunta extra recebe as perguntas que ainda vêm, sem contato nem passos da IA', () => {
+  const f = perguntasFuturas(EVENTOS, 'ideia', { nome: 'Rita', evento: 'Casamento' }, {})
+  assert.ok(f.includes('Que investimento tem pensado para a animação?'))
+  assert.ok(!f.some((x) => /e-mail|telemóvel|proposta/i.test(x)))
+})
+
+test('os textos fixos podem ser trocados no formulario.ts', () => {
+  const T = textosDe({ idioma: 'pt-PT', textos: { resumoTitulo: 'Resumo do seu pedido' } })
+  assert.equal(T.resumoTitulo, 'Resumo do seu pedido')
+  assert.equal(T.telefone, 'Telemóvel')
+})
+
+test('a ficha do lead põe o primeiro nome no servidor e monta o link do WhatsApp', () => {
+  const m = mensagemComNome('Olá {nome}, vi o seu pedido.', 'Rita Sousa')
+  assert.equal(m, 'Olá Rita, vi o seu pedido.')
+  assert.equal(linkWhatsapp('+351 912 345 678', m), 'https://wa.me/351912345678?text=Ol%C3%A1%20Rita%2C%20vi%20o%20seu%20pedido.')
+  assert.equal(linkWhatsapp('', m), undefined)
 })

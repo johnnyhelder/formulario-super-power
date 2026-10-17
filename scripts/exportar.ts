@@ -14,6 +14,7 @@ import { problemasDa } from '../src/lib/validar'
 import { MODELO, esquemasJSON, passoSugestao } from '../src/lib/ia'
 import { etapas } from '../src/lib/fluxo'
 import { instrucao, instrucaoEmpresa, sistema } from '../src/lib/prompts'
+import { textosDe } from '../src/lib/textos'
 
 const raiz = resolve(process.cwd())
 const i = process.argv.indexOf('--caminho')
@@ -71,15 +72,18 @@ writeFileSync(
       empresa: instrucaoEmpresa('{{NOME}}', '{{RESULTADOS}}'),
       instrucoes: {
         notas: instrucao(C, 'notas', DADOS),
-        aprofundar: instrucao(C, 'aprofundar', DADOS),
+        aprofundar: instrucao(C, 'aprofundar', DADOS, '{{FUTURAS}}'),
         mapa: instrucao(C, 'mapa', DADOS),
         resumo: instrucao(C, 'resumo', DADOS),
+        ficha: instrucao(C, 'ficha', DADOS),
       },
       esquemas: esquemasJSON(C),
       passos: C.passos.map((p) => ({ id: p.id, tipo: p.tipo, resumo: p.resumo })),
       contato: C.contato,
       sugestaoMaximo: passoSugestao(C)?.maximo ?? 3,
       totalEtapas: etapas(C).length,
+      // Rótulos da ficha do lead (o resto do aviso chega montado da página).
+      textosFicha: (({ temperatura, temperaturas, abordagem, proximoPasso, mensagemPronta, abrirWhatsapp }) => ({ temperatura, temperaturas, abordagem, proximoPasso, mensagemPronta, abrirWhatsapp }))(textosDe(C)),
     },
     null,
     2,

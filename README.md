@@ -33,6 +33,7 @@ Formulário comprido cansa e filtra mal. A pessoa desiste no meio, ou responde q
 - **Painel "Resumo do seu caso"** que se escreve sozinho, e um radar que muda a cada resposta.
 - **Voltar e Recomeçar** a qualquer momento.
 - **Grava cada resposta**, não só as conversas concluídas. `npm run leads` mostra onde as pessoas desistem.
+- **Ficha do lead pronta para atender.** Quando o pedido chega, a IA diz se é quente, morno ou frio e porquê, como abordar, o próximo passo, e escreve a primeira mensagem de WhatsApp, com o link que já abre a conversa com ela escrita. A IA nunca recebe o nome, o e-mail nem o telefone: o nome entra depois, no servidor.
 - **Aviso a cada lead** por e-mail, e opcionalmente no Telegram ou num webhook (n8n, Make, CRM), com todas as respostas, o mapa e a origem do anúncio (`utm_*`).
 - **Modo de teste.** Abra com `?teste=1`. O pedido fica marcado, o aviso vai com [TESTE] e `npm run leads -- apagar-testes` limpa tudo.
 - **Pergunta com educação quando algo parece engano.** "Só para confirmar, mais de 200 convidados com um investimento até 300 €?" A pessoa corrige ali mesmo, ou confirma e o pedido chega marcado para rever à mão.
