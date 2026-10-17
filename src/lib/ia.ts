@@ -6,6 +6,9 @@ import type { Config, Nivel, Passo } from './tipos'
 // responder neste formato) e um zod (para conferir de novo antes de usar).
 // As listas fechadas (país, segmentos, áreas) vêm do formulario.ts.
 
+// O modelo de todas as chamadas (a rota, o `npm run verificar` e o `npm run chave` leem daqui).
+export const MODELO = 'claude-haiku-5-5'
+
 export const NIVEIS = ['baixo', 'medio', 'alto'] as const
 export const NIVEL_VALOR: Record<Nivel, number> = { baixo: 0.25, medio: 0.55, alto: 0.9 }
 

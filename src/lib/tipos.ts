@@ -119,6 +119,10 @@ export type Config = {
     areas: string[]
     // A etiqueta na seta do cartão do cenário (ex. "com IA", "com a nossa ajuda").
     ligacao: string
+    // Anotações ao vivo: espera esta pausa na escrita (ms) e pelo menos estas letras novas
+    // antes de chamar a IA de novo. Mais alto = mais barato, menos "ao vivo". Padrão 1100 e 12.
+    pausaMs?: number
+    letrasNovas?: number
   }
   radar?: { titulo: string; eixos: EixoRadar[] }
   aviso: { assunto: (r: Respostas) => string }

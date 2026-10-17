@@ -10,6 +10,10 @@ Preços de outubro de 2026. Confira sempre a página de preços de cada serviço
 | E-mail (Resend) | grátis | Até 3 mil e-mails por mês no plano grátis. |
 | Hospedagem (Vercel) | grátis ou US$ 20/mês | O Hobby é grátis, mas só para uso não comercial. Para empresa, Pro. |
 
-**Proteções que já vêm ligadas:** limite de chamadas à IA por pessoa (30 a cada 10 minutos), campo escondido contra robôs, conversas concluídas em menos de 25 segundos marcadas como suspeitas (não geram e-mail), textos cortados antes de ir para a IA.
+**Proteções que já vêm ligadas**
+- Limite de chamadas à IA por pessoa (30 a cada 10 minutos). Fica em memória, por isso na Vercel cada instância conta à parte.
+- Teto diário para o site inteiro, guardado no banco (`IA_TETO_DIARIO`, padrão 1500 chamadas, cerca de 0,50 US$). É o que segura o pior caso da fatura. Sem banco, não existe.
+- Campo escondido contra robôs, e conversas concluídas em menos de 25 segundos marcadas como suspeitas (não geram aviso).
+- Textos cortados antes de ir para a IA.
 
-Se quiser um teto de gasto, defina um limite mensal na conta da Anthropic (platform.claude.com > Settings > Limits).
+Defina também um limite de gasto mensal na conta ou no workspace da Anthropic (platform.claude.com > Settings > Limits). É o travão final.

@@ -32,9 +32,10 @@ Formulário comprido cansa e filtra mal. A pessoa desiste no meio, ou responde q
 - **Painel "Resumo do seu caso"** que se escreve sozinho, e um radar que muda a cada resposta.
 - **Voltar e Recomeçar** a qualquer momento.
 - **Grava cada resposta**, não só as conversas concluídas. `npm run leads` mostra onde as pessoas desistem.
-- **E-mail a cada lead**, com todas as respostas, o mapa e a origem do anúncio (`utm_*`).
+- **Aviso a cada lead** por e-mail, e opcionalmente no Telegram ou num webhook (n8n, Make, CRM), com todas as respostas, o mapa e a origem do anúncio (`utm_*`).
+- **Modo de teste.** Abra com `?teste=1`. O pedido fica marcado, o aviso vai com [TESTE] e `npm run leads -- apagar-testes` limpa tudo.
 - **Funciona sem IA.** Sem chaves, ou se a IA falhar, a conversa segue com as perguntas fixas.
-- **Proteção contra robôs e abuso.** Campo escondido, tempo mínimo, limite de chamadas por pessoa.
+- **Proteção contra robôs e abuso.** Campo escondido, tempo mínimo, limite de chamadas por pessoa e teto diário de chamadas à IA.
 
 ## Começo rápido com o Claude Code
 

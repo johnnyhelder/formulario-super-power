@@ -179,6 +179,8 @@ export const FORMULARIO: Config = {
       'Quem responde quer saber onde a IA pode ajudar o negócio dele a vender mais e se organizar.',
     areas: ['vendas', 'atendimento', 'marketing', 'operação', 'financeiro', 'organização'],
     ligacao: 'com IA',
+    pausaMs: 1100,
+    letrasNovas: 12,
   },
 
   // O desenho em teia no painel. Cada eixo vai de 0 a 1 e muda a cada resposta.

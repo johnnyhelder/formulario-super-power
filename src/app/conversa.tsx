@@ -110,6 +110,8 @@ export function Conversa() {
   const sessao = useRef('')
   const inicio = useRef(0)
   const origem = useRef<string | undefined>(undefined)
+  // ?teste=1 no endereço: o pedido fica marcado como teste e o aviso diz [TESTE].
+  const teste = useRef(false)
   const fimRef = useRef<HTMLDivElement>(null)
   const entradaRef = useRef<HTMLInputElement & HTMLTextAreaElement>(null)
   const promessaPergunta = useRef<Promise<void> | undefined>(undefined)
@@ -143,6 +145,7 @@ export function Conversa() {
           origem: origem.current,
           duracaoSeg: Math.round((Date.now() - inicio.current) / 1000),
           site: site || undefined,
+          teste: teste.current || undefined,
         }),
       }).catch(() => {})
     },
@@ -185,6 +188,7 @@ export function Conversa() {
     const q = new URLSearchParams(window.location.search)
     const partes = [q.get('utm_source'), q.get('utm_campaign'), q.get('utm_content')].filter(Boolean)
     origem.current = partes.length ? partes.join(' / ') : undefined
+    teste.current = q.get('teste') === '1'
     ;(async () => {
       const primeira = proxima(C, null, {}, {})!
       await falar(perguntaDe(primeira).texto, undefined, 500)
@@ -210,14 +214,14 @@ export function Conversa() {
   useEffect(() => {
     if (passoAtual?.tipo !== 'problema') return
     const t = texto.trim()
-    if (t.length < 25 || Math.abs(t.length - ultimaNota.current.length) < 12) return
+    if (t.length < 25 || Math.abs(t.length - ultimaNota.current.length) < (C.ia.letrasNovas ?? 12)) return
     const id = setTimeout(async () => {
       ultimaNota.current = t
       setAnotando(true)
       const notas = await pedirIA<NotasIA>({ tipo: 'notas', respostas: limpas({ ...rRef.current, [passoAtual.id]: t }), ia: iaRef.current })
       setAnotando(false)
       if (notas) atualizarIa({ notas, notasTexto: t })
-    }, 1100)
+    }, C.ia.pausaMs ?? 1100)
     return () => clearTimeout(id)
   }, [texto, passoAtual])
 
@@ -431,6 +435,7 @@ export function Conversa() {
           origem: origem.current,
           duracaoSeg: Math.round((Date.now() - inicio.current) / 1000),
           site: site || undefined,
+          teste: teste.current || undefined,
         }),
       })
       if (!res.ok) throw new Error()

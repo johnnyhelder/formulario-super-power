@@ -7,6 +7,7 @@ import './_env'
 import { neon } from '@neondatabase/serverless'
 import { FORMULARIO } from '../formulario'
 import { problemasDa } from '../src/lib/validar'
+import { MODELO } from '../src/lib/ia'
 import { mascarar } from './_env'
 
 const env = (n: string) => (process.env[n] ?? '').trim()
@@ -36,7 +37,7 @@ async function main() {
         'content-type': 'application/json',
         ...(env('ANTHROPIC_WORKSPACE_ID') ? { 'anthropic-workspace-id': env('ANTHROPIC_WORKSPACE_ID') } : {}),
       },
-      body: JSON.stringify({ model: 'claude-haiku-5-5', max_tokens: 5, messages: [{ role: 'user', content: 'ok' }] }),
+      body: JSON.stringify({ model: MODELO, max_tokens: 5, messages: [{ role: 'user', content: 'ok' }] }),
     })
     const j = (await r.json().catch(() => ({}))) as { error?: { message?: string } }
     if (r.ok) ok(`chave válida e com créditos (${mascarar(chave)})`)
@@ -59,12 +60,20 @@ async function main() {
     }
   }
 
-  secao('5. Aviso por e-mail (Resend)')
-  if (!env('RESEND_API_KEY') || !env('AVISO_PARA')) aviso('RESEND_API_KEY ou AVISO_PARA vazia: ninguém recebe e-mail quando chega um lead.')
-  else ok(`avisa ${env('AVISO_PARA')} a partir de ${env('AVISO_DE') || 'onboarding@resend.dev (só entrega ao dono da conta Resend)'}`)
+  if (env('DATABASE_URL')) ok(`teto de ${Number(env('IA_TETO_DIARIO')) || 1500} chamadas à IA por dia (IA_TETO_DIARIO)`)
+  else if (env('ANTHROPIC_API_KEY')) aviso('Sem banco não há teto diário de chamadas à IA, só o limite por pessoa. Ponha um limite de gasto na conta da Anthropic.')
 
-  if (!env('DATABASE_URL') && !(env('RESEND_API_KEY') && env('AVISO_PARA'))) {
-    erro('Sem banco e sem e-mail, os leads perdem-se. Configure pelo menos um dos dois.')
+  secao('5. Avisos de lead novo')
+  const temEmail = Boolean(env('RESEND_API_KEY') && env('AVISO_PARA'))
+  const temTelegram = Boolean(env('AVISO_TELEGRAM_TOKEN') && env('AVISO_TELEGRAM_CHAT'))
+  if (temEmail) ok(`e-mail para ${env('AVISO_PARA')} a partir de ${env('AVISO_DE') || 'onboarding@resend.dev (só entrega ao dono da conta Resend)'}`)
+  else aviso('RESEND_API_KEY ou AVISO_PARA vazia: sem e-mail quando chega um lead.')
+  if (env('AVISO_TESTE_PARA')) ok(`pedidos de teste (?teste=1) vão para ${env('AVISO_TESTE_PARA')}`)
+  if (temTelegram) ok('Telegram ligado')
+  if (env('AVISO_WEBHOOK_URL')) ok('webhook ligado')
+
+  if (!env('DATABASE_URL') && !temEmail && !temTelegram && !env('AVISO_WEBHOOK_URL')) {
+    erro('Sem banco e sem nenhum aviso, os leads perdem-se. Configure pelo menos um.')
   }
 
   console.log(erros ? `\n✗ ${erros} problema(s) para corrigir.\n` : '\n✓ Tudo pronto.\n')

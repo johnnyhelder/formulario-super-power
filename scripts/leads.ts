@@ -1,6 +1,7 @@
 /**
- * Mostra no terminal as últimas conversas e onde as pessoas desistem.
+ * Mostra no terminal as últimas conversas e onde as pessoas desistem (sem os testes).
  *   npm run leads
+ *   npm run leads -- apagar-testes     (apaga as conversas abertas com ?teste=1)
  */
 import { neon } from '@neondatabase/serverless'
 import { exigir } from './_env'
@@ -11,9 +12,14 @@ const sql = neon(exigir('DATABASE_URL', 'Copie a connection string do Neon (Dash
 const ETAPAS = etapas(FORMULARIO)
 
 async function main() {
+  if (process.argv[2] === 'apagar-testes') {
+    const apagadas = (await sql.query('delete from form_respostas where teste returning sessao')) as unknown[]
+    console.log(`\n✓ ${apagadas.length} conversa(s) de teste apagada(s).\n`)
+    return
+  }
   const leads = (await sql.query(
     `select nome, email, telefone, origem, duracao_seg, criado_em from form_respostas
-     where concluido and not suspeito order by criado_em desc limit 20`,
+     where concluido and not suspeito and not teste order by criado_em desc limit 20`,
   )) as { nome: string; email: string; telefone: string | null; origem: string | null; duracao_seg: number | null; criado_em: string }[]
   console.log(`\nÚltimos leads (${leads.length})`)
   for (const l of leads) {
@@ -22,7 +28,7 @@ async function main() {
   }
 
   const funil = (await sql.query(
-    `select passo, count(*)::int as n from form_respostas where not suspeito and criado_em > now() - interval '30 days' group by passo order by passo`,
+    `select passo, count(*)::int as n from form_respostas where not suspeito and not teste and criado_em > now() - interval '30 days' group by passo order by passo`,
   )) as { passo: number; n: number }[]
   const total = funil.reduce((s, f) => s + f.n, 0)
   console.log(`\nOnde pararam, últimos 30 dias (${total} conversas)`)

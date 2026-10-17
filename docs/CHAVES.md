@@ -8,7 +8,9 @@ Grave cada chave com o comando abaixo. Ela não aparece na tela, não passa pelo
 npm run chave -- NOME_DA_VARIAVEL
 ```
 
-No Claude Code, escreva com `!` na frente (`! npm run chave`), para o comando rodar no seu terminal.
+**Rode num terminal a sério**, aberto à parte, na pasta do projeto. O `!` do Claude Code não serve, porque não tem teclado para a leitura escondida (o script avisa e não grava nada). O `.env.local` fica com permissão só para o seu utilizador.
+
+Se a chave não for aceite, o script mostra só os 7 primeiros caracteres, o tamanho e quantos caracteres invisíveis tirou da colagem. Nunca a chave inteira.
 
 | Variável | Onde criar | Para quê | Sem ela |
 |---|---|---|---|
@@ -18,6 +20,10 @@ No Claude Code, escreva com `!` na frente (`! npm run chave`), para o comando ro
 | `RESEND_API_KEY` | [resend.com](https://resend.com) > API Keys | E-mail a cada lead novo. | Ninguém é avisado; os leads ficam só no banco. |
 | `AVISO_PARA` | (não é segredo) | Quem recebe o e-mail. Vários, separados por vírgula. | |
 | `AVISO_DE` | (não é segredo) Domínio verificado no Resend > Domains | Quem envia, ex. `Formulário <form@seudominio.com>`. | Usa `onboarding@resend.dev`, que só entrega ao dono da conta Resend. |
+| `AVISO_TESTE_PARA` | (não é segredo) | Para onde vão os pedidos feitos com `?teste=1`. | Vão para `AVISO_PARA`, com [TESTE] no assunto. |
+| `AVISO_TELEGRAM_TOKEN`, `AVISO_TELEGRAM_CHAT` | @BotFather no Telegram; o chat id aparece em `https://api.telegram.org/bot<TOKEN>/getUpdates` depois de mandar uma mensagem ao bot | Aviso no telemóvel a cada lead. | Só e-mail. |
+| `AVISO_WEBHOOK_URL` | O seu n8n, Make, Zapier ou CRM | Recebe cada lead em JSON. | |
+| `IA_TETO_DIARIO` | (não é segredo) | Máximo de chamadas à IA por dia no site inteiro (precisa do banco). | 1500. |
 
 `AVISO_PARA` e `AVISO_DE` não são segredo: pode escrevê-las direto no `.env.local`.
 
@@ -34,3 +40,5 @@ Algumas chaves novas pedem também o ID do workspace. O `npm run chave` percebe 
 ## Montando para um cliente
 
 Cada cliente tem **as próprias contas e as próprias chaves**. Nunca reaproveite a sua. Os custos ficam misturados e, se um cliente sair, você não consegue desligar só a parte dele.
+
+Se o cliente não quiser abrir conta na Anthropic, crie pelo menos **um workspace por cliente** na sua conta (platform.claude.com > Settings > Workspaces), com **limite de gasto mensal**, e uma chave dentro desse workspace. Assim vê quanto cada um gasta e o pior caso tem teto.

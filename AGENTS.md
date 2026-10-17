@@ -35,9 +35,9 @@ Mapa do código:
 ## Regras de segurança (inegociáveis)
 
 1. **Segredos só no `.env.local` e nas variáveis da Vercel.** `ANTHROPIC_API_KEY`, `FIRECRAWL_API_KEY`, `DATABASE_URL` e `RESEND_API_KEY` nunca vão para código, commit, README, issue ou log.
-2. **Peça para a pessoa gravar cada chave com `npm run chave -- NOME`**, que lê o valor escondido, testa a da Anthropic e grava no `.env.local` (e na Vercel, se o projeto estiver ligado). No Claude Code, peça para ela rodar com `!` na frente (`! npm run chave`), para o valor não passar pela conversa. Nunca peça que cole uma chave no chat. Se ela colar mesmo assim, não repita o valor, grave no `.env.local` e recomende criar outra chave e apagar a exposta.
+2. **Peça para a pessoa gravar cada chave com `npm run chave -- NOME`**, que lê o valor escondido, testa a da Anthropic e grava no `.env.local` com permissão só para ela (e na Vercel, se o projeto estiver ligado). **Ela tem de rodar num terminal a sério, aberto à parte, na pasta do projeto.** O `!` do Claude Code não serve: não tem teclado para a leitura escondida (o script avisa e não grava nada). Avise antes que o script pode pedir o **ID do workspace** da Anthropic (algumas chaves novas precisam dele; está em platform.claude.com > Settings > Workspaces e não é segredo). Nunca peça que cole uma chave no chat. Se ela colar mesmo assim, não repita o valor, grave no `.env.local` e recomende criar outra chave e apagar a exposta.
 3. **Nunca imprima segredos.** Não rode `cat .env.local`, `env` ou `printenv`. Para conferir, `npm run verificar`, que mascara os valores.
-4. **Uma chave por projeto.** Se a pessoa monta para vários clientes, cada cliente tem a própria conta e as próprias chaves. Nunca copie a chave de um projeto para outro.
+4. **Uma chave por projeto.** Se a pessoa monta para vários clientes, cada cliente tem a própria conta (ou, no mínimo, o próprio workspace na Anthropic, com limite de gasto mensal) e as próprias chaves. Se a chave sair da conta de quem instala, os custos do cliente caem no cartão errado. Nunca copie a chave de um projeto para outro.
 5. **O token de login da assinatura do Claude (`sk-ant-oat...`) não serve aqui.** Só chaves da API, criadas em platform.claude.com.
 6. **Antes de qualquer commit**, confirme que `.env.local` está ignorado (`git check-ignore .env.local`). Nunca use `git add -A` sem olhar o `git status`.
 7. **Dados de quem responde são pessoais.** Não exporte nem mostre a lista de leads fora do terminal da pessoa. A IA nunca recebe nome, e-mail ou telefone (o `dadosParaIA` tira-os; mantenha assim).
@@ -58,9 +58,9 @@ Depois, siga as etapas e marque o progresso ("etapa 2 de 6").
 | 1. Perguntas | Reescrever o `formulario.ts` com a pessoa (ver **Como escrever as perguntas**). Mostre a lista de perguntas em texto simples antes de editar e espere o ok. | `npm test` passa. |
 | 2. Ver a funcionar | `npm run dev` e abrir http://localhost:3000. Sem chaves, a conversa já funciona (sem os extras de IA). | A pessoa respondeu até ao fim. |
 | 3. Chaves | `npm run chave` (Anthropic), `npm run chave -- FIRECRAWL_API_KEY`, e o banco e o e-mail (`docs/CHAVES.md`). | `npm run verificar` sem ✗. |
-| 4. Publicar | `docs/PUBLICAR.md`: GitHub, Vercel, variáveis, domínio. | O site publicado responde até ao fim e o e-mail chega. |
+| 4. Publicar | `docs/PUBLICAR.md`: GitHub, Vercel, variáveis, domínio. | O site publicado, aberto com `?teste=1`, responde até ao fim e o e-mail chega com [TESTE] no assunto. |
 | 5. Medir | Ligar o Pixel ou o Google Tag (já dispara `Lead` no fim se o `fbq` existir na página). Mostrar `npm run leads`. | A pessoa vê o lead de teste. |
-| 6. Fechamento | Lembrar de apagar os leads de teste no Neon e de olhar o funil (`npm run leads`) depois da primeira semana. | Ela confirma. |
+| 6. Fechamento | Os testes feitos com `?teste=1` no endereço ficam marcados e apagam-se com `npm run leads -- apagar-testes`. Lembrar de olhar o funil (`npm run leads`) depois da primeira semana. | Ela confirma. |
 
 ## Como escrever as perguntas
 
@@ -86,7 +86,10 @@ Os tipos de passo e o que cada um aceita estão comentados em `src/lib/tipos.ts`
 - **"Quanta gente desiste?"** `npm run leads` mostra o funil dos últimos 30 dias.
 - **"A IA não pesquisou a empresa."** Empresas pequenas ou nomes comuns às vezes não aparecem, e de propósito o cartão só aparece com confiança média ou alta. Confira `FIRECRAWL_API_KEY` e os logs da Vercel com `[ia]`.
 - **"Quanto custa?"** Ver `docs/CUSTOS.md`. Na prática, cêntimos por lead.
-- **"Quero mandar o lead para o WhatsApp, CRM ou planilha."** Não existe ainda. Acrescente na função `avisar` de `src/app/api/respostas/route.ts`, depois do e-mail, sem tirar o e-mail.
+- **"Quero receber o lead no Telegram, CRM ou planilha."** Telegram: `AVISO_TELEGRAM_TOKEN` e `AVISO_TELEGRAM_CHAT`. CRM, planilha, n8n, Make ou Zapier: `AVISO_WEBHOOK_URL` recebe o pedido inteiro em JSON. WhatsApp direto não existe (passe pelo webhook). Pedidos de teste não vão para estes canais.
+- **"Quero testar sem sujar os leads."** Abrir o endereço com `?teste=1`. O pedido fica marcado, o e-mail vai com [TESTE] (para `AVISO_TESTE_PARA`, se existir) e `npm run leads -- apagar-testes` limpa tudo.
+- **"E se alguém abusar da IA?"** Há limite por pessoa (30 chamadas a cada 10 minutos, em memória) e um teto diário para o site inteiro, guardado no banco (`IA_TETO_DIARIO`, padrão 1500). Sem banco, só o limite por pessoa: nesse caso, ponha também um limite de gasto na conta da Anthropic.
+- **"As anotações ao vivo gastam muito."** Subir `ia.pausaMs` e `ia.letrasNovas` no `formulario.ts`.
 
 ## Ao mudar código
 
@@ -94,6 +97,8 @@ Os tipos de passo e o que cada um aceita estão comentados em `src/lib/tipos.ts`
 - Rode `npm run typecheck`, `npm test` e `npm run build` antes de dizer que terminou.
 - Se a IA falhar, a conversa tem de seguir sem os extras. Não transforme nenhuma chamada à IA num passo obrigatório.
 - Não adicione dependências para o que o projeto já resolve.
+- O modelo da IA está numa constante só (`MODELO` em `src/lib/ia.ts`); a rota, o `npm run verificar` e o `npm run chave` leem dali.
+- O limite por pessoa usa o primeiro IP do cabeçalho `x-forwarded-for`, que a Vercel preenche. Fora da Vercel (servidor próprio), confirme que o proxy (nginx) substitui esse cabeçalho, senão qualquer um o falsifica.
 
 ## Estilo dos textos públicos
 

@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { FORMULARIO } from '../../../../formulario'
 import { rateLimitOrReject } from '@/lib/rate-limit'
+import { contarChamadaIA } from '@/lib/banco'
 import { dadosParaIA } from '@/lib/fluxo'
-import { eixosIA, esquemasJSON, esquemasZod, iaSchema, respostasSchema, type IA } from '@/lib/ia'
+import { MODELO, eixosIA, esquemasJSON, esquemasZod, iaSchema, respostasSchema, type IA } from '@/lib/ia'
 
 // As peças de IA da conversa, com Claude Haiku e saída estruturada (JSON
 // Schema): a resposta é sempre um objeto com campos fechados, nunca texto
@@ -11,9 +12,11 @@ import { eixosIA, esquemasJSON, esquemasZod, iaSchema, respostasSchema, type IA 
 // página segue sem estes extras.
 // A empresa é pesquisada na internet (Firecrawl, ~2 créditos por pesquisa).
 // Sem FIRECRAWL_API_KEY, a IA não pesquisa e o cartão da empresa não aparece.
+// Dois travões no gasto: limite por IP (em memória, por instância) e um teto
+// diário de chamadas guardado no banco, que vale para o site inteiro.
 
-const MODELO = 'claude-haiku-5-5'
 const C = FORMULARIO
+const TETO_DIARIO = Number(process.env.IA_TETO_DIARIO) || 1500
 
 const pedidoSchema = z.discriminatedUnion('tipo', [
   z.object({ tipo: z.literal('empresa'), empresa: z.string().trim().min(2).max(120) }),
@@ -108,6 +111,12 @@ export async function POST(request: NextRequest) {
   if (!chave) return NextResponse.json({ ok: false }, { status: 503 })
 
   try {
+    // O teto diário só existe com banco. Sem ele, fica só o limite por IP.
+    const hoje = await contarChamadaIA()
+    if (hoje !== null && hoje > TETO_DIARIO) {
+      console.error('[ia] teto diário atingido', hoje)
+      return NextResponse.json({ ok: false }, { status: 429 })
+    }
     const resultados = pedido.tipo === 'empresa' ? await pesquisar(pedido.empresa) : []
     // Sem resultados não há o que ler: o Haiku só adivinharia.
     if (pedido.tipo === 'empresa' && resultados.length === 0) {

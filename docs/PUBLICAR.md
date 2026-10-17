@@ -11,7 +11,7 @@ O formulário vive num endereço só dele, por exemplo `diagnostico.seudominio.c
 3. **Variáveis.** Em Settings > Environment Variables, cadastre as mesmas do `.env.local` (ou rode `npx vercel link` e depois `npm run chave -- NOME` para cada uma, que grava lá também).
 4. **Publicar de novo** (Deployments > ⋯ > Redeploy), para as variáveis valerem.
 5. **Domínio.** Settings > Domains > `diagnostico.seudominio.com`. A Vercel mostra o registro CNAME para criar no seu DNS.
-6. **Teste de ponta a ponta** no endereço publicado, do primeiro "Oi" ao e-mail na sua caixa.
+6. **Teste de ponta a ponta** no endereço publicado com `?teste=1` no fim (ex. `https://diagnostico.seudominio.com/?teste=1`), do primeiro "Oi" ao e-mail na sua caixa com [TESTE] no assunto. Depois, `npm run leads -- apagar-testes`.
 
 > O plano Hobby da Vercel é para uso não comercial. Para o formulário de uma empresa, os termos pedem o plano Pro. Avalie com o seu cliente.
 
