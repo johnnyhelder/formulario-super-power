@@ -15,7 +15,7 @@ npm run exportar -- --caminho /pedido    # o formulário fica em seudominio.com/
 
 Sai a pasta `publicar/`, com a página (`index.html`, `_next/`) e a API (`api/*.php`, `api/config.json`). Se usar o Turnstile, ponha antes a `NEXT_PUBLIC_TURNSTILE_SITE_KEY` no seu `.env.local` (é pública; vai dentro da página).
 
-**Mudou uma pergunta?** Volte a correr `npm run exportar` e envie a pasta de novo. Os segredos e as conversas guardadas no servidor não são tocados.
+**Mudou uma pergunta ou o `negocio.ts` (`npm run conhecer`)?** Volte a correr `npm run exportar` e envie a pasta de novo. Os critérios internos do `negocio.ts` vão no `api/config.json`, que o `.htaccess` (ou o bloco do nginx, abaixo) não deixa abrir pela web. Os segredos e as conversas guardadas no servidor não são tocados.
 
 ## 2. Enviar para o servidor
 

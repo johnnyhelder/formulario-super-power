@@ -1,5 +1,6 @@
 import type { z } from 'zod'
 import { FORMULARIO as C } from '../../formulario'
+import { NEGOCIO } from '../../negocio'
 import { MODELO, esquemasJSON, esquemasZod } from './ia'
 import { sistema } from './prompts'
 import { chave } from './env'
@@ -11,7 +12,7 @@ import { contarChamadaIA } from './banco'
 
 const JSONS = esquemasJSON(C)
 const ZODS = esquemasZod(C)
-const SISTEMA = sistema(C)
+const SISTEMA = sistema(C, NEGOCIO)
 const TETO_DIARIO = Number(process.env.IA_TETO_DIARIO) || 1500
 
 export type TipoIA = keyof typeof JSONS

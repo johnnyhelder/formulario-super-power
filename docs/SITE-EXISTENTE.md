@@ -7,7 +7,8 @@ Para pôr o formulário numa página de um site que já tem visual, rotas, banco
 
 | Do formulário | Para o seu site |
 |---|---|
-| `formulario.ts` | a raiz do projeto (ou ajuste o caminho nos imports) |
+| `formulario.ts` e `negocio.ts` | a raiz do projeto (ou ajuste o caminho nos imports). O `negocio.ts` só pode ser importado por código do servidor (`src/lib/claude.ts`, a rota das respostas), nunca pela página. |
+| `scripts/conhecer.ts`, `scripts/_conhecer.ts`, `scripts/_env.ts` | `scripts/`, com `"conhecer": "tsx scripts/conhecer.ts"` no `package.json`. Rode `npm run conhecer -- --site seudominio.com` |
 | `src/lib/*` | a mesma pasta, ou `src/lib/formulario/` (ajuste os imports `@/lib/...`) |
 | `src/app/conversa.tsx`, `src/app/pecas.tsx`, `src/app/formulario.css` | a pasta da página, ex. `src/app/diagnostico/` |
 | `src/app/api/formulario/` (ia, respostas, sessao) | `src/app/api/formulario/` |

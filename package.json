@@ -16,6 +16,7 @@
     "test": "tsx --test tests/*.test.ts",
     "verificar": "tsx scripts/verificar.ts",
     "chave": "bash scripts/definir-chave.sh",
+    "conhecer": "tsx scripts/conhecer.ts",
     "leads": "tsx scripts/leads.ts",
     "exportar": "tsx scripts/exportar.ts"
   },

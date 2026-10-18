@@ -1,4 +1,4 @@
-import type { Config } from './tipos'
+import type { Config, Negocio } from './tipos'
 import { IDIOMAS } from './textos'
 
 // Confere se o formulario.ts está coerente. Devolve a lista de problemas,
@@ -91,4 +91,13 @@ export function problemasDa(config: Config): string[] {
   if (!/^#[0-9a-fA-F]{6}$/.test(config.marca.cor)) erros.push('marca.cor tem de ser uma cor em hexadecimal, ex. #F59E0B.')
 
   return erros
+}
+
+// O negocio.ts vai em todas as chamadas à IA: longo demais encarece e dilui o que importa.
+export const LIMITES_NEGOCIO = { objetivo: 300, publico: 2500, interno: 2500 } as const
+
+export function problemasDoNegocio(N: Negocio): string[] {
+  return (Object.keys(LIMITES_NEGOCIO) as (keyof typeof LIMITES_NEGOCIO)[])
+    .filter((k) => N[k].length > LIMITES_NEGOCIO[k])
+    .map((k) => `negocio.ts: o "${k}" tem ${N[k].length} caracteres; o máximo é ${LIMITES_NEGOCIO[k]}. Resuma.`)
 }

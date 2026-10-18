@@ -10,6 +10,7 @@ import { execSync } from 'node:child_process'
 import { join, resolve } from 'node:path'
 import { tmpdir } from 'node:os'
 import { FORMULARIO as C } from '../formulario'
+import { NEGOCIO } from '../negocio'
 import { problemasDa } from '../src/lib/validar'
 import { MODELO, esquemasJSON, passoSugestao } from '../src/lib/ia'
 import { etapas } from '../src/lib/fluxo'
@@ -68,14 +69,15 @@ writeFileSync(
   JSON.stringify(
     {
       modelo: MODELO,
-      sistema: sistema(C),
+      sistema: sistema(C, NEGOCIO),
       empresa: instrucaoEmpresa('{{NOME}}', '{{RESULTADOS}}'),
       instrucoes: {
         notas: instrucao(C, 'notas', DADOS),
         aprofundar: instrucao(C, 'aprofundar', DADOS, '{{FUTURAS}}'),
         mapa: instrucao(C, 'mapa', DADOS),
         resumo: instrucao(C, 'resumo', DADOS),
-        ficha: instrucao(C, 'ficha', DADOS),
+        // Os critérios internos do negocio.ts só vão aqui (o config.json está bloqueado à web, docs/PHP.md).
+        ficha: instrucao(C, 'ficha', DADOS, '', NEGOCIO),
       },
       esquemas: esquemasJSON(C),
       passos: C.passos.map((p) => ({ id: p.id, tipo: p.tipo, resumo: p.resumo })),

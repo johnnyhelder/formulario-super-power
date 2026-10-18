@@ -2,7 +2,7 @@
 
 Instruções para qualquer agente de código (Claude Code, Codex, Cursor, Gemini CLI, Copilot e outros) que abrir este repositório. **Este arquivo é a fonte única.** O `CLAUDE.md` só importa este arquivo; um teste (`tests/agentes.test.ts`) garante que continue assim. Mude as regras aqui.
 
-Quando a pessoa disser "me ajuda a configurar" (ou algo parecido), comece pelo **Roteiro** abaixo. Não explique o projeto inteiro antes; faça as perguntas do diagnóstico.
+Quando a pessoa disser "me ajuda a configurar" (ou algo parecido), comece pelo **Roteiro** abaixo. Não explique o projeto inteiro antes. **Não pergunte o que dá para descobrir:** o negócio aprende-se pela pesquisa (`npm run conhecer`), e só depois se pergunta, já com um palpite.
 
 ## Quem você está ajudando
 
@@ -23,7 +23,9 @@ Mapa do código:
 
 | Arquivo | O que faz |
 |---|---|
-| `formulario.ts` | Língua, perguntas, opções, textos, cores, o que a IA sabe do negócio, regras de coerência, radar, assunto do e-mail. |
+| `formulario.ts` | Língua, perguntas, opções, textos, cores, o que a IA sabe do negócio, regras de coerência, radar, assunto do e-mail. Vai para o navegador. |
+| `negocio.ts` | O que a IA sabe do negócio em detalhe: objetivo do formulário, `publico` (usado na conversa) e `interno` (critérios só para a ficha do lead). Gerado por `npm run conhecer`. Só o servidor o lê: nunca o importe na página (um teste confere). |
+| `scripts/conhecer.ts` | `npm run conhecer`: descobre o site, lê o que há de público sobre o negócio, propõe o objetivo, entrevista o dono e escreve o `negocio.ts` e o `.conhecer/RELATORIO.md`. |
 | `exemplos/eventos.ts` | Um segundo exemplo, bem diferente (pedidos de orçamento de eventos, PT-PT, tema claro). Para partir dele, copie-o por cima do `formulario.ts`. |
 | `src/lib/textos.ts` | Os textos fixos da conversa em pt-BR, pt-PT, es e en. |
 | `src/lib/tipos.ts` | O que cada tipo de passo aceita (leia antes de editar o `formulario.ts`). |
@@ -51,23 +53,34 @@ Mapa do código:
 
 ## Roteiro
 
-Comece com um diagnóstico curto, em **uma** mensagem:
+Comece só com duas perguntas, em **uma** mensagem:
 
-1. Para que negócio é o formulário? O que ele vende, para quem, em que país e em que língua (pt-BR, pt-PT, es, en)?
-2. O que quer saber de quem responde para decidir se é um bom cliente? (porte, orçamento, urgência, região...)
-3. Para onde vão os leads: e-mail, banco, os dois?
-4. O formulário vai ser um site à parte (ex. `diagnostico.seudominio.com`), uma página dentro de um site Next.js que já existe (siga `docs/SITE-EXISTENTE.md`), ou vai morar num alojamento PHP (cPanel, WordPress, servidor próprio sem Node)? No último caso, siga `docs/PHP.md` (`npm run exportar`).
+1. Em que endereço o formulário vai morar? (ex. `diagnostico.seudominio.com` ou `seudominio.com/pedido`; se o negócio não tem site, diga o nome dele). Se o projeto já tem `FORMULARIO_SITE`, `NEXT_PUBLIC_SITE_URL` ou o link da privacidade no `formulario.ts`, confirme em vez de perguntar.
+2. Vai ser um site à parte, uma página dentro de um site Next.js que já existe (siga `docs/SITE-EXISTENTE.md`), ou um alojamento PHP (cPanel, WordPress, servidor próprio sem Node; siga `docs/PHP.md`)?
 
-Depois, siga as etapas e marque o progresso ("etapa 2 de 6").
+O que o negócio vende, para quem, em que língua e o que é um bom cliente vêm da etapa 2. Depois, siga as etapas e marque o progresso ("etapa 2 de 7").
 
 | Etapa | O que fazer | Prova de que deu certo |
 |---|---|---|
-| 1. Perguntas | Reescrever o `formulario.ts` com a pessoa (ver **Como escrever as perguntas**). Mostre a lista de perguntas em texto simples antes de editar e espere o ok. | `npm test` passa. |
-| 2. Ver a funcionar | `npm run dev` e abrir http://localhost:3000. Sem chaves, a conversa já funciona (sem os extras de IA). | A pessoa respondeu até ao fim. |
-| 3. Chaves | `npm run chave` (Anthropic), `npm run chave -- FIRECRAWL_API_KEY`, e o banco e o e-mail (`docs/CHAVES.md`). | `npm run verificar` sem ✗. |
-| 4. Publicar | `docs/PUBLICAR.md`: GitHub, Vercel, variáveis, domínio. | O site publicado, aberto com `?teste=1`, responde até ao fim e o e-mail chega com [TESTE] no assunto. |
-| 5. Medir | Ligar o Pixel ou o Google Tag (já dispara `Lead` no fim se o `fbq` existir na página). Mostrar `npm run leads`. | A pessoa vê o lead de teste. |
-| 6. Fechamento | Os testes feitos com `?teste=1` no endereço ficam marcados e apagam-se com `npm run leads -- apagar-testes`. Lembrar de olhar o funil (`npm run leads`) depois da primeira semana. | Ela confirma. |
+| 1. Chaves | `npm run chave` (Anthropic) e `npm run chave -- FIRECRAWL_API_KEY` (as duas servem já à etapa 2). Banco e e-mail podem ficar para a etapa 5 (`docs/CHAVES.md`). | `npm run verificar` sem ✗ na IA e na pesquisa. |
+| 2. Conhecer o negócio | Ver **Conhecer o negócio**, abaixo. | `negocio.ts` preenchido e a pessoa confirmou o objetivo. |
+| 3. Perguntas | Reescrever o `formulario.ts` com a pessoa, partindo das sugestões do `.conhecer/RELATORIO.md` (ver **Como escrever as perguntas**). Mostre a lista de perguntas em texto simples antes de editar e espere o ok. | `npm test` passa. |
+| 4. Ver a funcionar | `npm run dev` e abrir http://localhost:3000. | A pessoa respondeu até ao fim. |
+| 5. Publicar | `docs/PUBLICAR.md`: GitHub, Vercel, variáveis, domínio. | O site publicado, aberto com `?teste=1`, responde até ao fim e o e-mail chega com [TESTE] no assunto. |
+| 6. Medir | Ligar o Pixel ou o Google Tag (já dispara `Lead` no fim se o `fbq` existir na página). Mostrar `npm run leads`. | A pessoa vê o lead de teste. |
+| 7. Fechamento | Os testes feitos com `?teste=1` no endereço ficam marcados e apagam-se com `npm run leads -- apagar-testes`. Lembrar de olhar o funil (`npm run leads`) depois da primeira semana. | Ela confirma. |
+
+## Conhecer o negócio
+
+O formulário já sabe qual é a função dele (os passos). Falta saber de quem é. A ordem é sempre: **pesquisar tudo, propor o objetivo, o dono corrige o rumo, e só então perguntar o que falta, com palpite.**
+
+1. Rode `npm run conhecer -- --site ENDEREÇO` (ou sem `--site`, se o projeto já o tem). Se a pessoa tiver artigos, entrevistas ou perfis que não estão no site, junte `--links url1,url2`. O script lê o site (até 25 páginas) e a internet, e mostra o que entendeu, até 3 objetivos possíveis e as perguntas, cada uma com um palpite. Custa uns 50 créditos do Firecrawl e uma chamada ao Claude Sonnet, uma vez só.
+2. Mostre à pessoa o que entendeu e os objetivos, e pergunte se está no caminho certo. **Se ela corrigir o rumo**, rode `npm run conhecer -- --corrigir "o que ela disse"` (refaz o entendimento e as perguntas sem pesquisar de novo) e mostre outra vez. Repita até ela confirmar.
+3. Faça as perguntas **uma de cada vez**, com o palpite, para ela só confirmar ou corrigir. Não pergunte o que o entendimento já responde.
+4. Grave as respostas em `.conhecer/respostas.json` (`{"objetivo": "...", "respostas": [{"pergunta": "...", "resposta": "..."}], "extra": "..."}`) e rode `npm run conhecer -- --fechar`. Sai o `negocio.ts` e o `.conhecer/RELATORIO.md` (fontes e sugestões para o `formulario.ts`).
+5. Mostre à pessoa o `objetivo`, o `publico` e o `interno` do `negocio.ts` e confirme que nada do `publico` é segredo.
+
+Se a pessoa correr num terminal à parte, o próprio script faz a entrevista ali. A pasta `.conhecer/` fica fora do git. O `negocio.ts` vai no commit (o repositório do cliente deve ser privado, porque o `interno` tem critérios do negócio). Na versão PHP, rode `npm run exportar` de novo depois de mudar o `negocio.ts`.
 
 ## Como escrever as perguntas
 
@@ -85,7 +98,7 @@ O que faz este formulário dar prazer em responder (e filtrar bem) é o desenho 
 - **De 10 a 16 passos** no total. O progresso e o "faltam ~N" mostram que está a acabar; mais do que isso cansa.
 - **Faixas de dinheiro na moeda da pessoa** (`opcoes: (r) => ...` a partir do país) e sempre com "Prefiro não dizer".
 - **`pular`** para não perguntar o que já se sabe (o país que a pesquisa da empresa trouxe, por exemplo).
-- **`ia.sobre`** é o que a IA sabe do negócio: o que vende, para quem, o que o diagnóstico procura. Duas ou três frases concretas mudam muito a qualidade das anotações e do mapa.
+- **`ia.sobre`** é o resumo do negócio em duas ou três frases (o relatório do `npm run conhecer` sugere um). O detalhe fica no `negocio.ts`: o `publico` entra em todas as chamadas, o `interno` só na ficha do lead, e é ele que decide quente, morno ou frio pelos critérios do dono.
 - **`ia.ligacao`** é a etiqueta na seta do cartão do cenário. "com IA" para quem vende IA; "com a nossa ajuda", "com o tratamento", "com o novo site", conforme o negócio.
 
 Os tipos de passo e o que cada um aceita estão comentados em `src/lib/tipos.ts`. Regras que o `npm test` confere: ids únicos, sem espaço nem acento; no máximo um passo de cada tipo especial (`empresa`, `problema`, `escala`, `extra`, `mapa`); `extra` e `mapa` depois do `problema`; o último passo é o e-mail ou o telefone; `passoPais` e `passoSegmento` apontam para passos `escolha` com lista fixa, depois da empresa.

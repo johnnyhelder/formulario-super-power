@@ -6,7 +6,8 @@
 import './_env'
 import { neon } from '@neondatabase/serverless'
 import { FORMULARIO } from '../formulario'
-import { problemasDa } from '../src/lib/validar'
+import { NEGOCIO } from '../negocio'
+import { problemasDa, problemasDoNegocio } from '../src/lib/validar'
 import { MODELO } from '../src/lib/ia'
 import { mascarar } from './_env'
 
@@ -24,6 +25,9 @@ async function main() {
   if (problemas.length === 0) ok(`${FORMULARIO.passos.length} passos, tudo coerente`)
   else problemas.forEach(erro)
   if (FORMULARIO.marca.nome === 'Sua Marca') aviso('marca.nome ainda é "Sua Marca". Troque pelo nome real.')
+  problemasDoNegocio(NEGOCIO).forEach(erro)
+  if (!NEGOCIO.publico && !NEGOCIO.interno) aviso('negocio.ts vazio: rode npm run conhecer para a IA conhecer o negócio (fica muito melhor).')
+  else ok(`negocio.ts preenchido${NEGOCIO.origem ? ` (${NEGOCIO.origem})` : ''}`)
 
   secao('2. IA (Anthropic)')
   const chave = env('ANTHROPIC_API_KEY')

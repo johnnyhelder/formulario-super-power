@@ -173,3 +173,17 @@ export type Config = {
   coerencia?: Coerencia[]
   aviso: { assunto: (r: Respostas) => string }
 }
+
+// O que a IA sabe do negócio além do ia.sobre, no negocio.ts. Gerado por `npm run conhecer`
+// (pesquisa pública + entrevista com o dono). Fica fora do formulario.ts de propósito: o
+// formulario.ts vai para o navegador, e o `interno` só pode existir no servidor.
+export type Negocio = {
+  // Para que serve este formulário (ex. "marcar visita com casais que casam nos próximos 18 meses").
+  objetivo: string
+  // O que a IA pode usar na conversa com quem responde: o que vende, para quem, tom, diferenciais.
+  publico: string
+  // Só para a ficha do lead, que só o dono vê: quem é bom cliente, quem não é, valores, objeções.
+  interno: string
+  // De onde e quando veio (ex. "2026-10-18, pesquisa em seusite.com e entrevista").
+  origem?: string
+}

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { FORMULARIO } from '../../../../../formulario'
+import { NEGOCIO } from '../../../../../negocio'
 import { rateLimitOrReject } from '@/lib/rate-limit'
 import { gravar } from '@/lib/banco'
 import { iaSchema, respostasSchema, type FichaIA, type IA } from '@/lib/ia'
@@ -86,7 +87,7 @@ async function avisar(envio: Envio, teste: boolean) {
   // A ficha do lead: mais uma chamada ao Haiku, só quando o pedido chega. Se falhar, o aviso sai sem ela.
   let ficha: FichaIA | undefined
   if (chaveDe('ANTHROPIC_API_KEY')) {
-    const res = await perguntarClaude('ficha', instrucao(C, 'ficha', dadosParaIA(C, envio.respostas, ia))).catch(() => null)
+    const res = await perguntarClaude('ficha', instrucao(C, 'ficha', dadosParaIA(C, envio.respostas, ia), '', NEGOCIO)).catch(() => null)
     if (res?.ok) ficha = res.dados
   }
   const a = montarAviso(C, { ...envio, ia, contato: envio.contato! }, teste, ficha)

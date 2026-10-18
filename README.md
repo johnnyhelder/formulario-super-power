@@ -24,6 +24,7 @@ Formulário comprido cansa e filtra mal. A pessoa desiste no meio, ou responde q
 
 ## O que faz
 
+- **Aprende o seu negócio antes de perguntar.** Depois de instalar, `npm run conhecer` descobre onde o formulário mora, lê o seu site e o que há de público sobre o negócio, propõe o objetivo do formulário e só então pergunta o que falta, já com um palpite em cada pergunta. Você corrige o rumo quando ele erra. A IA da conversa passa a falar do que você vende, e a ficha do lead decide quente ou frio pelos seus critérios, que nunca são ditos a quem responde.
 - **Uma pergunta de cada vez, como num chat.** Balões, "digitando…", opções em botões, barra de progresso com "faltam ~N".
 - **Pesquisa a empresa na hora.** A pessoa escreve o nome, o formulário pesquisa na internet e mostra o cartão com o que encontrou (cidade, país, o que faz, site). "É esta a sua empresa?" Se for, o país já fica respondido e os segmentos mais prováveis sobem para o topo. Só aparece quando a pesquisa tem confiança; na dúvida, segue sem cartão.
 - **Anota enquanto a pessoa escreve.** No campo "o que você quer resolver", as anotações aparecem ao vivo. Ao enviar, surge o cartão do cenário (como é hoje, o que trava, onde quer chegar).
@@ -56,7 +57,7 @@ E diga
 
 > me ajuda a configurar para o meu negócio
 
-A LLM lê o `CLAUDE.md`, pergunta o que você vende e o que precisa saber de quem responde, reescreve as perguntas com você, e conduz as chaves e a publicação, uma etapa de cada vez. Ela nunca pede para você colar chave no chat.
+A LLM lê o `CLAUDE.md`, pergunta só onde o formulário vai morar, grava as chaves com você, pesquisa o seu negócio (`npm run conhecer`), confirma o objetivo e faz as perguntas que a pesquisa não respondeu. Depois reescreve as perguntas do formulário com você e conduz a publicação, uma etapa de cada vez. Ela nunca pede para você colar chave no chat.
 
 Usa outra LLM (Codex, Cursor, Gemini CLI, Copilot)? As instruções moram no `AGENTS.md`, que essas ferramentas leem sozinhas.
 
@@ -73,8 +74,9 @@ Abra http://localhost:3000. A conversa já funciona sem nenhuma chave, só sem o
 
 1. **Edite o `formulario.ts`.** É o único arquivo que você precisa mudar (perguntas, opções, textos, cor e o que a IA sabe do seu negócio). Os tipos de passo estão explicados em `src/lib/tipos.ts`. Depois, `npm test`.
 2. **Grave as chaves** com `npm run chave -- NOME` (ela não aparece na tela). Veja [docs/CHAVES.md](docs/CHAVES.md).
-3. **Confira** com `npm run verificar`.
-4. **Publique** na Vercel. Veja [docs/PUBLICAR.md](docs/PUBLICAR.md).
+3. **Ensine o negócio à IA** com `npm run conhecer -- --site seudominio.com`, num terminal: ele pesquisa, propõe o objetivo, entrevista você e escreve o `negocio.ts`. As sugestões para o `formulario.ts` ficam em `.conhecer/RELATORIO.md`.
+4. **Confira** com `npm run verificar`.
+5. **Publique** na Vercel. Veja [docs/PUBLICAR.md](docs/PUBLICAR.md).
 
 ## Os tipos de passo
 

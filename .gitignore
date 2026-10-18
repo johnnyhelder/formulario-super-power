@@ -17,3 +17,6 @@ npm-debug.log*
 
 # versão PHP gerada por npm run exportar
 publicar/
+
+# pesquisa e entrevista do npm run conhecer (o resultado que vale é o negocio.ts)
+.conhecer/
